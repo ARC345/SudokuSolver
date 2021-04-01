@@ -109,18 +109,14 @@ struct RCB {
 		SetPN(true);
 	}
 	bool PossibleNums[9];
+
 	int begin;
 	int end;
 
 	void SetPN(bool b1) {
 		SetPN(b1, b1, b1, b1, b1, b1, b1, b1, b1);
 	}
-	void SetPN(
-		bool b1,bool b2,
-		bool b3,bool b4,
-		bool b5,bool b6,
-		bool b7,bool b8,
-		bool b9) {
+	void SetPN(bool b1,bool b2,bool b3,bool b4,bool b5,bool b6,bool b7,bool b8,bool b9) {
 		PossibleNums[0] = b1;
 		PossibleNums[1] = b2;
 		PossibleNums[2] = b3;
@@ -131,10 +127,9 @@ struct RCB {
 		PossibleNums[7] = b8;
 		PossibleNums[8] = b9;
 	}
-	void SetPN(bool b, int pos) {
-		if (pos < 9 && pos >= 0)
-			PossibleNums[pos] = b;
-	}
+	inline void SetPN(bool b, int pos) { if (pos < 9 && pos >= 0)PossibleNums[pos] = b; }
+	inline void SetPN(bool b, int pos, int& CPencil) { if (pos < 9 && pos >= 0) { PossibleNums[pos] = b; CPencil++; } }
+	
 	virtual int GetOffset(int OffsetAmt) = 0;
 	virtual Cell& GetOffset(int OffsetAmt, Cell* gv) = 0;
 };
@@ -196,12 +191,12 @@ bool IsCellFilled(Cell& cv) {
 	return (cv.IsFilled);
 }
 
-void DrawSudoku(Cell* arr) {
+void PrepareGridForPrinting(Cell* gv) {
 	int x = 0;
 	for (char& c : grid)
 		if (!isspace(c))
 		{
-			Cell& CurrCell = arr[x];
+			Cell& CurrCell = gv[x];
 			if (CurrCell.Num != 0) {
 				c = CurrCell.Num + '0';
 				CurrCell.IsFilled = true;
@@ -270,20 +265,18 @@ void Solve_clearPN_itrl_r(Row* rows, Cell* gv, int& CPencil, int& CPen) {
 		}
 
 }
-void Solve_clearPN_itrl_c(Col* cols, Cell* gridvals, int& CPencil, int& CPen) {
+void Solve_clearPN_itrl_c(Col* cols, Cell* gv, int& CPencil, int& CPen) {
 	// for every column reduce possibilities
-	for (int currCol = 0; currCol < 9; currCol++)
-		for (int currCell = 0; currCell < 9; currCell++) {		// for ever cell in row
-			int cellLoc = cols[currCol].begin + currCell * 9;	// Current Cell in iteration (first cell of col + offset) 
-
-			Col& CurrentCol = cols[currCol];					// Current Row alias
-			Cell& CurrentCell = gridvals[cellLoc];				// Current Cell alias
+	for (int x = 0; x < 9; x++)
+		for (int y = 0; y < 9; y++) {		// for ever cell in row
+			Col& CurrentCol = cols[x];					// Current Row alias
+			Cell& CurrentCell = CurrentCol.GetOffset(y, gv);
 
 			if (IsCellFilled(CurrentCell)) 					// if CurrCell is filled
-				if (CurrentCell.IsIteratedC == false) {
+				if (!CurrentCell.IsIteratedC) {
 					CurrentCell.IsIteratedC = true;
-					for (int ECC = 0; ECC < 9; ECC++) {				// for every Cell in col (ECC)
-						Cell& CurrCellR = gridvals[CurrentCol.begin + ECC * 9];	// Current Cell R is the first cell row + iteration to get the offset or column
+					for (int z = 0; z < 9; z++) {				// for every Cell in col (ECC)
+						Cell& CurrCellR = CurrentCol.GetOffset(z, gv);	// Current Cell R is the first cell row + iteration to get the offset or column
 						CurrCellR.PossibleNums[CurrentCell.Num - 1] = false;
 						CPencil++;
 					}
@@ -354,7 +347,7 @@ void AdvancedSolve_itrl_r(Row* rows, Cell* gridvals, int& CPencil, int& CPen){
 			if (!C1.IsFilled)
 				for (int PV = 0; PV < 9; PV++)
 				{
-					bool Fill = false;
+					bool bFill = false;
 
 					if (C1.PossibleNums[PV])
 					{
@@ -366,28 +359,28 @@ void AdvancedSolve_itrl_r(Row* rows, Cell* gridvals, int& CPencil, int& CPen){
 
 								if (!C2.IsFilled)
 									if (C2.PossibleNums[PV]) {
-										Fill = false;
+										bFill = false;
 										break;		// jump out of loop CC2
 									}
 									else {
-										Fill = true;
+										bFill = true;
 										continue;
 									}
 							}
 						}
-						if (Fill) {
+						if (bFill) {
 							C1.SetNum(PV + 1, CPencil, CPen);
 						}
 					}
 				}
 		}
 }
-void AdvancedSolve_itrl_c(Col* cols, Cell* gridvals, int& CPencil, int& CPen) {
+void AdvancedSolve_itrl_c(Col* cols, Cell* gv, int& CPencil, int& CPen) {
 	for (int x = 0; x < 9; x++)
 		for (int y = 0; y < 9; y++)
 		{
 			Col& C1 = cols[x];
-			Cell& CCC1 = gridvals[C1.begin + y * 9];
+			Cell& CCC1 = C1.GetOffset(y, gv);
 
 			if (!CCC1.IsFilled)
 				for (int PV = 0; PV < 9; PV++)
@@ -399,7 +392,7 @@ void AdvancedSolve_itrl_c(Col* cols, Cell* gridvals, int& CPencil, int& CPen) {
 						for (int CC2 = 0; CC2 < 9; CC2++)
 						{
 							if (y != CC2) {
-								Cell& C2 = gridvals[C1.begin + CC2 * 9];
+								Cell& C2 = C1.GetOffset(CC2, gv);
 
 								if (!C2.IsFilled)
 									if (C2.PossibleNums[PV] == true) {
@@ -515,7 +508,7 @@ int main()
 		}
 
 		int iteration = 1;
-		DrawSudoku(PZI.gridvals);
+		PrepareGridForPrinting(PZI.gridvals);
 		std::cout << grid << std::endl;
 		std::cout << "Press #f + enter# to open hint sheet" << std::endl;
 		std::cout << "Press #a + enter# to solve in normal mode" << std::endl << std::endl;
@@ -587,7 +580,7 @@ int main()
 				AdvancedSolve(PZI, ChangesMade_Pencil, ChangesMade_Pen);
 
 			}
-			DrawSudoku(PZI.gridvals);
+			PrepareGridForPrinting(PZI.gridvals);
 			if (bDebugMode || bExtremeDebugMode) {
 				if (bExtremeDebugMode) {
 					ExtremeDebug(PZI.gridvals, ChangesMade_Pencil, ChangesMade_Pen);
@@ -608,7 +601,7 @@ int main()
 			TotalChangesMade_Pen += ChangesMade_Pen;
 		}
 		std::cout << std::endl << std::endl << std::endl;
-		DrawSudoku(PZI.gridvals);
+		PrepareGridForPrinting(PZI.gridvals);
 		std::cout << grid;
 		std::cout << std::endl << std::endl << std::endl;
 
@@ -632,5 +625,4 @@ int main()
 			}
 		}
 	}
-
 }
