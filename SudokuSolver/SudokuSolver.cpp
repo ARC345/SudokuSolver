@@ -449,7 +449,7 @@ int main()
 
 		Puzzles Puzzle;
 
-		grid = "# # # # # # # # #\n";
+		grid  = "# # # # # # # # #\n";
 		grid += "# # # # # # # # #\n";
 		grid += "# # # # # # # # #\n";
 		grid += "# # # # # # # # #\n";
@@ -514,8 +514,6 @@ int main()
 			}
 		}
 
-		bool bSolved = false;
-
 		int iteration = 1;
 		DrawSudoku(PZI.gridvals);
 		std::cout << grid << std::endl;
@@ -570,9 +568,9 @@ int main()
 
 		typedef std::chrono::steady_clock::time_point TP;
 
-		TP StartTimepoint = std::chrono::high_resolution_clock::now();
 		TP EndTimepoint;
-		while (!bSolved) {
+		TP StartTimepoint = std::chrono::high_resolution_clock::now();
+		while (true) {
 			int ChangesMade_Pencil = 0;
 			int ChangesMade_Pen = 0;
 			bool bAdvanced = false;
@@ -586,7 +584,7 @@ int main()
 
 				//else
 				bAdvanced = true;
-				AdvancedSolve(PZI.boxs, PZI.cols, PZI.rows, PZI.gridvals, ChangesMade_Pencil, ChangesMade_Pen);
+				AdvancedSolve(PZI, ChangesMade_Pencil, ChangesMade_Pen);
 
 			}
 			DrawSudoku(PZI.gridvals);
