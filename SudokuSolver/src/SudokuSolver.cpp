@@ -47,6 +47,17 @@ struct Puzzles {
 		0,0,0,5,1,4,3,0,0
 	};
 	uint p4[81]{
+	0,0,0,0,9,0,8,0,0,
+	0,0,4,1,5,0,0,0,0,
+	0,6,0,0,0,0,0,7,0,
+	0,0,5,0,0,0,0,0,0,
+	1,8,0,7,0,0,5,0,0,
+	0,0,0,0,2,0,0,6,0,
+	0,0,0,0,1,5,4,0,0,
+	3,0,6,0,0,8,0,9,0,
+	0,7,0,0,0,0,0,0,0
+	};
+	uint p5[81]{
 		8,0,0,0,0,0,0,0,0,
 		0,0,3,6,0,0,0,0,0,
 		0,7,0,0,9,0,2,0,0,
@@ -62,7 +73,7 @@ struct Cell {
 	Cell() :
 		Num(0),
 		Loc(0),
-		IsFilled(0),
+		bFilled(0),
 		IsFilledTemp(0),
 		INO(0)
 	{
@@ -75,25 +86,30 @@ struct Cell {
 	uint Num;
 	uint Loc;
 	uint INO;
-	uint IsFilled : 1;
-	uint IsFilledTemp : 1;
+	uint bFilled : 1;
+	uint IsFilledTemp : 1; // todo remove
 	bool PossibleNums[9];
 
-	bool SetNum(uint x, bool btemp = false) {
-		if (!IsFilled && x <= 9 && x > 0) {
-			Num = x;
-			btemp ? IsFilled : IsFilledTemp = true;
+	bool SetNum(uint x, bool bAdd = false) {
+		if (!bFilled && x <= 9 && x > 0) {
+			Num = x + bAdd;
+			bFilled = true;
 			return true;
 		}
 		return false;
 	}
-	bool SetNum(uint x, uint& CPencil, uint& CPen, bool btemp = false) {
-		if (SetNum(x, btemp)) {
+	bool SetNum(uint x, uint& CPencil, uint& CPen, bool bAdd = false) {
+		if (SetNum(x, bAdd)) {
 			CPen++;
 			return true;
 		}
 		return false;
 	}
+
+	bool IsCellFilled() {
+		return bFilled;
+	}
+
 };
 class SudGrid {
 	char grid[163] = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n";
@@ -106,10 +122,10 @@ public:
 				Cell& CurrCell = gv[x];
 				if (CurrCell.Num != 0) {
 					c = CurrCell.Num + '0';
-					CurrCell.IsFilled = true;
+					CurrCell.bFilled = true;
 				}
 				else {
-					CurrCell.IsFilled = false;
+					CurrCell.bFilled = false;
 				}
 				x++;
 			}
@@ -183,7 +199,7 @@ struct Box : RCB
 		return gv[GetOffset(OffsetAmt)];
 	};
 };
-struct PuzzleInfo {
+struct PuzzleState {
 	Row rows[9];
 	Col cols[9];
 	Box boxs[9];
@@ -191,22 +207,18 @@ struct PuzzleInfo {
 
 	uint Pencil=0;
 	uint Pen=0;
-	PuzzleInfo() : Pencil(0), Pen(0) {};
-};
+	PuzzleState() : Pencil(0), Pen(0) {};
 
-// are all cells filled
-bool IsSolved(Cell* gridvals) {
-	for (uint x = 0; x < 81; x++) {
-		if (!gridvals[x].IsFilled) {
-			return false;
+	// are all cells filled
+	bool IsSolved() {
+		for (auto& gv: gridvals) {
+			if (!gv.bFilled) {
+				return false;
+			}
 		}
+		return true;
 	}
-	return true;
-}
-
-bool IsCellFilled(Cell& cv) {
-	return (cv.IsFilled);
-}
+};
 
 uint GetRowNo(uint CellNo) {
 	return (CellNo / 9) + 1;
@@ -225,7 +237,7 @@ void ExtremeDebug(Cell* gridvals, uint& CPencil, uint& CPen) {
 	for (uint x = 0; x < 81; x++) {
 		std::cout << "Cell No: " << x << "	:	";
 		Cell& currCell = gridvals[x];
-		if (IsCellFilled(currCell)) {
+		if (currCell.bFilled) {
 			std::cout << "Filled: " << gridvals[x].Num;
 			std::cout << std::endl;
 		}
@@ -254,7 +266,7 @@ void Solve_clearPN_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 		for (uint y = 0; y < 9; y++) {	
 			RCB& CR = _RCB[x];				
 			Cell& CC = CR.GetOffset(y, gv);			// Current Cell alias
-			if (IsCellFilled(CC))				// if CurrCell is filled
+			if (CC.bFilled)				// if CurrCell is filled
 				if (CC.INO < 3) {
 					CC.INO++;
 					for (uint z = 0; z < 9; z++) {			// for every Cell in row (ECR)
@@ -265,7 +277,6 @@ void Solve_clearPN_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 					CR.PossibleNums[CC.Num - 1] = false;
 				}
 		}
-
 }
 void Solve_makeChanges(Cell* gridvals, uint& CPencil, uint& CPen) {
 	// for every cell make changes
@@ -282,15 +293,15 @@ void Solve_makeChanges(Cell* gridvals, uint& CPencil, uint& CPen) {
 			}
 		}
 		if (NoOfPN == 1) {
-			if (!IsCellFilled(CC)) {
+			if (!CC.bFilled) {
 				CC.Num = LastPN + 1;
-				CC.IsFilled = true;
+				CC.bFilled = true;
 				++CPen;
 			}
 		}
 	}
 }
-void Solve(PuzzleInfo& PZI) {
+void Solve(PuzzleState& PZI) {
 	Solve_clearPN_itrl(PZI.rows, PZI.gridvals, PZI.Pencil, PZI.Pen);
 	Solve_clearPN_itrl(PZI.cols, PZI.gridvals, PZI.Pencil, PZI.Pen);
 	Solve_clearPN_itrl(PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
@@ -302,51 +313,136 @@ void AdvancedSolve_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 	for (uint x = 0; x < 9; x++)
 		for (uint y = 0; y < 9; y++)
 		{
-			RCB& C1 = _RCB[x];
-			Cell& CCC1 = C1.GetOffset(y, gv);
+			RCB& RCB1 = _RCB[x];
+			Cell& C1 = RCB1.GetOffset(y, gv);
 
-			if (!CCC1.IsFilled)
-				for (uint PV = 0; PV < 9; PV++)
+			if (C1.bFilled) continue;
+			for (uint PV = 0; PV < 9; PV++)
+				if (C1.PossibleNums[PV])
 				{
-					bool Fill = false;
-
-					if (CCC1.PossibleNums[PV] == true)
-					{
-						for (uint CC2 = 0; CC2 < 9; CC2++)
-						{
-							if (y != CC2) {
-								Cell& C2 = C1.GetOffset(CC2, gv);
-
-								if (!C2.IsFilled)
-									if (C2.PossibleNums[PV] == true) {
-										Fill = false;
-										break;		// jump out of loop CC2
-									}
-									else {
-										Fill = true;
-										continue;
-									}
+					bool bFill = false;
+					for (uint z = 0; z < 9; z++)
+						if (y != z) {
+							Cell& C2 = RCB1.GetOffset(z, gv);
+							if (C2.bFilled) continue;
+							if (C2.PossibleNums[PV]) {
+								bFill = false;
+								break;		// jump out of loop CC2
+							}
+							else {
+								bFill = true;
+								continue;
 							}
 						}
-						if (Fill) {
-							CCC1.SetNum(PV + 1, CPencil, CPen);
-						}
-					}
+					if (bFill)
+						C1.SetNum(PV + 1, CPencil, CPen);
 				}
 		}
 }
 
-void AdvancedSolve(PuzzleInfo& PZI) {
+void AdvancedSolve(PuzzleState& PZI) {
 	AdvancedSolve_itrl(PZI.rows, PZI.gridvals, PZI.Pencil, PZI.Pen);
 	AdvancedSolve_itrl(PZI.cols, PZI.gridvals, PZI.Pencil, PZI.Pen);
 	AdvancedSolve_itrl(PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
 }
 
-void ExtremeAdvancedSolve_itrl(PuzzleInfo& PZI) {
+// WIP
+bool ExtremeAdvancedSolve_itrl(PuzzleState& PZI, uint& it) {
+	int Z = it;
+	for (Cell& x : PZI.gridvals) {
+		if (!x.bFilled) {
+			Z--;
+			for (uint i = 0; i < 9; i++)
+			{
+				if (x.PossibleNums[i]) {
+					if (Z > 0) {
+						Z--;
+					}
+					x.Num = i + 1;
+					x.bFilled = true;
+				}
+			}
+			for (int x = 0; x < 1000; x++) {
+				PZI.Pen = 0; PZI.Pencil = 0;
+				Solve(PZI);
+				AdvancedSolve(PZI);
+				bool bp = false;
+				bool bs = true;
+
+				for (Cell& y : PZI.gridvals) {
+					if (!y.bFilled) {
+						for (uint i = 0; i < 9; i++)
+						{
+							if (y.PossibleNums[i]) {
+								bp = true;
+							}
+						}
+						if (!bp) {
+							return false;
+						}
+						bs = false;
+					}
+				}
+				if (bs) return true;
+				if (PZI.Pen == 0 && PZI.Pencil == 0) {
+					break;
+				}
+			}
+			return ExtremeAdvancedSolve_itrl(PZI, it);
+		}
+	}
 }
-void ExtremeAdvancedSolve(PuzzleInfo& PZI) {
-	PuzzleInfo PZI2 = PZI;
-	ExtremeAdvancedSolve_itrl(PZI2);
+void ExtremeAdvancedSolve(PuzzleState& PZI) {
+	PuzzleState PZI2 = PZI;
+	uint it = 1;
+	
+	//todo 
+	while (!ExtremeAdvancedSolve_itrl(PZI2, it)) {
+		it++;
+	}
+}
+
+void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
+	bool bbreak = false;
+
+	std::cout << "Choose Puzzle\n\n"
+		<< "Easy	: 1\n"
+		<< "Easy	: 2\n"
+		<< "Medium	: 3\n"
+		<< "Hard	: 4\n"
+		<< "Currently not solvable:\n"
+		<< "Very Hard	: 5\n"
+		<< std::endl << std::endl;
+	while (!bbreak) {
+		std::cin >> a;
+		switch (a)
+		{
+		case '1':
+			pz = Puzzle.p1;
+			bbreak = true;
+			break;
+		case '2':
+			pz = Puzzle.p2;
+			bbreak = true;
+			break;
+		case '3':
+			pz = Puzzle.p3;
+			bbreak = true;
+			break;
+		case '4':
+			pz = Puzzle.p4;
+			bbreak = true;
+			break;
+		case '5':
+			pz = Puzzle.p5;
+			bbreak = true;
+			break;
+		default:
+			std::cout << "Invalid Puzzle no" << std::endl << std::endl;
+			bbreak = false;
+			break;
+		}
+	}
 }
 
 int main()
@@ -374,47 +470,15 @@ int main()
 		*/
 
 		Puzzles Puzzle;
-		PuzzleInfo PZI;
+		PuzzleState PZI;
 		SudGrid SGrid;
 		uint* pz = Puzzle.p1;
 
 		// input stuff
 		char a;
-		bool bbreak = false;
 
-		std::cout << "Choose Puzzle\n\n"
-			<< "Easy	: 1\n"
-			<< "Easy	: 2\n"
-			<< "Medium	: 3\n"
-			<< "Currently not solvable:\n"
-			<< "Hard	: 4\n"
-			<< std::endl << std::endl;
-		while (!bbreak) {
-			std::cin >> a;
-			switch (a)
-			{
-			case '1':
-				pz = Puzzle.p1;
-				bbreak = true;
-				break;
-			case '2':
-				pz = Puzzle.p2;
-				bbreak = true;
-				break;
-			case '3':
-				pz = Puzzle.p3;
-				bbreak = true;
-				break;
-			case '4':
-				pz = Puzzle.p4;
-				bbreak = true;
-				break;
-			default:
-				std::cout << "Invalid Puzzle no" << std::endl << std::endl;
-				bbreak = false;
-				break;
-			}
-		}
+		ChoosePuzzle(a, Puzzle, pz);
+
 		NewPage();
 		for (uint x = 0; x < 81; x++) {
 			PZI.gridvals[x].Num = pz[x];
@@ -448,7 +512,7 @@ int main()
 		bool bExtremeDebugMode = false;
 		bool bReturnToMenu = false;
 
-		bbreak = false;
+		bool bbreak = false;
 		while (!bbreak) {
 			std::cin >> a;
 			switch (a)
@@ -515,7 +579,7 @@ int main()
 
 			Solve(PZI);
 			if (PZI.Pen == 0 && PZI.Pencil == 0) {
-				if (IsSolved(PZI.gridvals)) {
+				if (PZI.IsSolved()) {
 					EndTimepoint = std::chrono::high_resolution_clock::now();
 					break;
 				}
@@ -525,7 +589,7 @@ int main()
 				AdvancedSolve(PZI);
 
 				if (PZI.Pen == 0 && PZI.Pencil == 0) {
-					if (IsSolved(PZI.gridvals)) {
+					if (PZI.IsSolved()) {
 						EndTimepoint = std::chrono::high_resolution_clock::now();
 						break;
 					}
