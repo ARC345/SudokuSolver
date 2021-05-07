@@ -151,8 +151,7 @@ struct RCB {
 	uint end;
 
 	void SetPN(bool b1) {
-		for (bool& bx : PossibleNums)
-			bx = b1;
+		SetPN(b1, b1, b1, b1, b1, b1, b1, b1, b1);
 	}
 	void SetPN(bool b1,bool b2,bool b3,bool b4,bool b5,bool b6,bool b7,bool b8,bool b9) {
 		PossibleNums[0] = b1;
