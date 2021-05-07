@@ -450,6 +450,7 @@ bool BruteSolve_itrl(PuzzleState& PZI, uint& it) {
 		if (PZI.IsSolved()) return true;
 		if (PZI.IsInvalid()) return false;
 		std::cout << "\n";
+		//std::cin.get();
 		
 		AdvancedSolve(PZI);
 		std::cout << "AdvancedSolve set num \n";
