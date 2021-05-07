@@ -3,7 +3,6 @@
 
 #define NewPage() for(uint sksksk=0; sksksk<=100;sksksk++){std::cout << std::endl;}
 typedef unsigned int uint;
-
 enum PuzzleDifficulty {
 	VeryEasy,
 	Easy,
@@ -68,26 +67,31 @@ struct Puzzles {
 		0,0,8,5,0,0,0,1,0,
 		0,9,0,0,0,0,4,0,0
 	};
+	uint p6[81]{
+		0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,
+		0,0,1,0,0,0,2,0,0,
+		0,3,0,4,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0,
+		0,0,0,5,0,6,0,0,0,
+		0,0,7,0,0,0,8,0,0,
+		0,0,0,0,0,0,0,0,0,
+		0,0,0,0,0,0,0,0,0
+	};
 };
 struct Cell {
 	Cell() :
 		Num(0),
-		Loc(0),
 		bFilled(0),
-		IsFilledTemp(0),
 		INO(0)
 	{
-		Num = 0;
-		Loc = 0;
 		for (bool& x : PossibleNums) {
 			x = true;
 		}
 	}
 	uint Num;
-	uint Loc;
 	uint INO;
 	uint bFilled : 1;
-	uint IsFilledTemp : 1; // todo remove
 	bool PossibleNums[9];
 
 	bool SetNum(uint x, bool bAdd = false) {
@@ -208,17 +212,72 @@ struct PuzzleState {
 	uint Pencil=0;
 	uint Pen=0;
 	PuzzleState() : Pencil(0), Pen(0) {};
+	PuzzleState(const PuzzleState& PZI) {
+		Pencil = PZI.Pencil;
+		Pen = PZI.Pen;
 
+		for (uint x = 0; x < 9; x++) {
+			rows[x] = PZI.rows[x];
+			cols[x] = PZI.cols[x];
+			boxs[x] = PZI.boxs[x];
+		}
+		for (uint x = 0; x < 81; x++) {
+			gridvals[x] = PZI.gridvals[x];
+		}
+	}
+	bool IsInvalid() {
+
+		uint sum=0;
+
+		for (uint x = 0; x < 9; x++){
+			sum = 0;
+			for (uint y = 0; y < 9; y++)
+			{
+				RCB& RCB1 = rows[x];
+				Cell& C1 = RCB1.GetOffset(y, gridvals);
+
+				sum += C1.Num; 
+			}
+			if (sum > 45)
+				return true;
+		}
+		for (uint x = 0; x < 9; x++){
+			sum = 0;
+			for (uint y = 0; y < 9; y++)
+			{
+				RCB& RCB1 = cols[x];
+				Cell& C1 = RCB1.GetOffset(y, gridvals);
+
+				sum += C1.Num;
+			}
+			if (sum > 45)
+				return true;
+		}
+		for (uint x = 0; x < 9; x++){
+			sum = 0;
+			for (uint y = 0; y < 9; y++)
+			{
+				RCB& RCB1 = boxs[x];
+				Cell& C1 = RCB1.GetOffset(y, gridvals);
+
+				sum += C1.Num;
+			}
+			if (sum > 45)
+				return true;
+		}
+		return false;
+	}
 	// are all cells filled
 	bool IsSolved() {
 		for (auto& gv: gridvals) {
-			if (!gv.bFilled) {
+			if (gv.Num==0) {
 				return false;
 			}
 		}
 		return true;
 	}
 };
+void BruteSolve(PuzzleState& PZI, uint it = 0);
 
 uint GetRowNo(uint CellNo) {
 	return (CellNo / 9) + 1;
@@ -270,7 +329,7 @@ void Solve_clearPN_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 				if (CC.INO < 3) {
 					CC.INO++;
 					for (uint z = 0; z < 9; z++) {			// for every Cell in row (ECR)
-						Cell& CurrCellR = CR.GetOffset(z, gv);	// Current Cell R is the first cell row + iteration to get the offset orcolumn
+						Cell& CurrCellR = CR.GetOffset(z, gv);	// Current Cell R is the first cell row + iteration to get the offset or column
 						CurrCellR.PossibleNums[CC.Num - 1] = false;
 						CPencil++;
 					}
@@ -286,8 +345,7 @@ void Solve_makeChanges(Cell* gridvals, uint& CPencil, uint& CPen) {
 		Cell& CC = gridvals[CCNo];
 
 		for (uint CR = 0; CR < 9; CR++) {
-			bool& y = CC.PossibleNums[CR];
-			if (y == true) {
+			if (CC.PossibleNums[CR]) {
 				NoOfPN++;
 				LastPN = CR;
 			}
@@ -307,9 +365,13 @@ void Solve(PuzzleState& PZI) {
 	Solve_clearPN_itrl(PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
 
 	Solve_makeChanges(PZI.gridvals, PZI.Pencil, PZI.Pen);
+
+	Solve_clearPN_itrl(PZI.rows, PZI.gridvals, PZI.Pencil, PZI.Pen);
+	Solve_clearPN_itrl(PZI.cols, PZI.gridvals, PZI.Pencil, PZI.Pen);
+	Solve_clearPN_itrl(PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
 }
 
-void AdvancedSolve_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
+void AdvancedSolve_itrl(PuzzleState& PZI, RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 	for (uint x = 0; x < 9; x++)
 		for (uint y = 0; y < 9; y++)
 		{
@@ -335,71 +397,111 @@ void AdvancedSolve_itrl(RCB* _RCB, Cell* gv, uint& CPencil, uint& CPen) {
 							}
 						}
 					if (bFill)
+					{
+						Solve_clearPN_itrl(PZI.boxs, gv, CPencil, CPen);
+						Solve_clearPN_itrl(PZI.rows, gv, CPencil, CPen);
+						Solve_clearPN_itrl(PZI.cols, gv, CPencil, CPen);
 						C1.SetNum(PV + 1, CPencil, CPen);
+						Solve_clearPN_itrl(PZI.boxs, gv, CPencil, CPen);
+						Solve_clearPN_itrl(PZI.rows, gv, CPencil, CPen);
+						Solve_clearPN_itrl(PZI.cols, gv, CPencil, CPen);
+					}
 				}
 		}
 }
 
 void AdvancedSolve(PuzzleState& PZI) {
-	AdvancedSolve_itrl(PZI.rows, PZI.gridvals, PZI.Pencil, PZI.Pen);
-	AdvancedSolve_itrl(PZI.cols, PZI.gridvals, PZI.Pencil, PZI.Pen);
-	AdvancedSolve_itrl(PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
+
+	AdvancedSolve_itrl(PZI, PZI.rows, PZI.gridvals, PZI.Pencil, PZI.Pen);
+
+	AdvancedSolve_itrl(PZI, PZI.cols, PZI.gridvals, PZI.Pencil, PZI.Pen);
+
+	AdvancedSolve_itrl(PZI, PZI.boxs, PZI.gridvals, PZI.Pencil, PZI.Pen);
 }
 
 // WIP
-bool ExtremeAdvancedSolve_itrl(PuzzleState& PZI, uint& it) {
-	int Z = it;
-	for (Cell& x : PZI.gridvals) {
-		if (!x.bFilled) {
-			Z--;
-			for (uint i = 0; i < 9; i++)
-			{
-				if (x.PossibleNums[i]) {
-					if (Z > 0) {
-						Z--;
-					}
-					x.Num = i + 1;
-					x.bFilled = true;
-				}
-			}
-			for (int x = 0; x < 1000; x++) {
-				PZI.Pen = 0; PZI.Pencil = 0;
-				Solve(PZI);
-				AdvancedSolve(PZI);
-				bool bp = false;
-				bool bs = true;
+bool BruteSolve_itrl(PuzzleState& PZI, uint& it) {
+	SudGrid SGrid;
+	while (true) {
+		if (PZI.IsSolved()) return true;
+		if (PZI.IsInvalid()) return false;
 
-				for (Cell& y : PZI.gridvals) {
-					if (!y.bFilled) {
-						for (uint i = 0; i < 9; i++)
-						{
-							if (y.PossibleNums[i]) {
-								bp = true;
-							}
-						}
-						if (!bp) {
-							return false;
-						}
-						bs = false;
+		PZI.Pen = 0;
+		PZI.Pencil = 0;
+
+		Solve(PZI);
+		std::cout << "Solve set num \n";
+		std::cout << "\n" << PZI.Pen << " " << PZI.Pencil << "\n";
+		SGrid.PrepareGridForPrinting(PZI.gridvals);
+		SGrid.Print();
+
+		if (PZI.IsSolved()) return true;
+		if (PZI.IsInvalid()) return false;
+		std::cout << "\n";
+		//std::cin.get();
+		
+		AdvancedSolve(PZI);
+		std::cout << "AdvancedSolve set num \n";
+		std::cout << "\n" << PZI.Pen << " " << PZI.Pencil << "\n";
+		SGrid.PrepareGridForPrinting(PZI.gridvals);
+		SGrid.Print();
+
+		std::cout << "\n";
+		//std::cin.get();
+
+		if (PZI.Pen == 0 && PZI.Pencil == 0) break;
+
+		std::cout << "\n" << PZI.Pen << " " << PZI.Pencil << "\n";
+	}
+	if (PZI.IsSolved()) return true;
+	if (PZI.IsInvalid()) return false;
+	uint it2 = it; 
+	for (auto& gv : PZI.gridvals)
+	{
+		if (!gv.bFilled)
+		{
+			for (uint x = 0; x < 9; x++)
+			{
+				if (gv.PossibleNums[x])
+				{
+					if (it2 == 0) {
+						gv.SetNum(x + 1);
+						gv.bFilled = true;
+						std::cout << "Brute set num \n";
+						SGrid.PrepareGridForPrinting(PZI.gridvals);
+						SGrid.Print(); 
+						std::cout << "\n";
+						//std::cin.get();
+						break;
+					}
+					else {
+						it2--;
 					}
 				}
-				if (bs) return true;
-				if (PZI.Pen == 0 && PZI.Pencil == 0) {
-					break;
-				}
 			}
-			return ExtremeAdvancedSolve_itrl(PZI, it);
+			if(gv.bFilled) BruteSolve_itrl(PZI, it2);
 		}
 	}
+	if (PZI.IsSolved()) return true;
+	if (PZI.IsInvalid()) return false;
 }
-void ExtremeAdvancedSolve(PuzzleState& PZI) {
-	PuzzleState PZI2 = PZI;
-	uint it = 1;
+void BruteSolve(PuzzleState& PZI, uint it) {
+	PuzzleState PZI2 = PuzzleState(PZI);
+	{
+
+		//todo 
+		while (!BruteSolve_itrl(PZI2, it)) {
+			std::cout << "INVALID \n";
+			std::cin.get();
+			BruteSolve(PZI, it+1);
+		}
 	
-	//todo 
-	while (!ExtremeAdvancedSolve_itrl(PZI2, it)) {
-		it++;
+		PZI = PuzzleState(PZI2);
+
+		std::cout << PZI2.Pen;
 	}
+	std::cout << PZI2.Pen;
+
 }
 
 void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
@@ -412,6 +514,7 @@ void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
 		<< "Hard	: 4\n"
 		<< "Currently not solvable:\n"
 		<< "Very Hard	: 5\n"
+		<< "Very Hard	: 6\n"
 		<< std::endl << std::endl;
 	while (!bbreak) {
 		std::cin >> a;
@@ -435,6 +538,10 @@ void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
 			break;
 		case '5':
 			pz = Puzzle.p5;
+			bbreak = true;
+			break;
+		case '6':
+			pz = Puzzle.p6;
 			bbreak = true;
 			break;
 		default:
@@ -482,7 +589,6 @@ int main()
 		NewPage();
 		for (uint x = 0; x < 81; x++) {
 			PZI.gridvals[x].Num = pz[x];
-			PZI.gridvals[x].Loc = x;
 		}
 		uint z = 0;
 
@@ -572,37 +678,42 @@ int main()
 		TP EndTimepoint;
 		TP StartTimepoint = std::chrono::high_resolution_clock::now();
 		while (true) {
+			if (PZI.IsInvalid()) {
+				__debugbreak();
+			}
+
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
-			bool bExtremeAdvancedSolve = false;
+			bool bBruteSolve = false;
 
 			Solve(PZI);
+
 			if (PZI.Pen == 0 && PZI.Pencil == 0) {
 				if (PZI.IsSolved()) {
 					EndTimepoint = std::chrono::high_resolution_clock::now();
 					break;
 				}
 
-				//else
-				bAdvanced = true;
 				AdvancedSolve(PZI);
-
+				bAdvanced = true;
 				if (PZI.Pen == 0 && PZI.Pencil == 0) {
 					if (PZI.IsSolved()) {
 						EndTimepoint = std::chrono::high_resolution_clock::now();
 						break;
 					}
-					bExtremeAdvancedSolve = true;
-					ExtremeAdvancedSolve(PZI);
+					bBruteSolve = true;
+					BruteSolve(PZI);
+					if (PZI.IsSolved()) {
+						EndTimepoint = std::chrono::high_resolution_clock::now();
+						break;
+					}
 				}
 			}
-			SGrid.PrepareGridForPrinting(PZI.gridvals);
-
 				if (bDebugMode || bExtremeDebugMode) {
 					if (bExtremeDebugMode)
 						ExtremeDebug(PZI.gridvals, PZI.Pencil, PZI.Pen);
-					if (bExtremeAdvancedSolve)
+					if (bBruteSolve)
 						std::cout << "Iterations: " << iteration << " Type: BRUTE" << std::endl;
 					else if (bAdvanced)
 						std::cout << "Iterations: " << iteration << " Type: ADVANCED" << std::endl;
@@ -610,6 +721,7 @@ int main()
 						std::cout << "Iterations: " << iteration << " Type: BASIC" << std::endl;
 
 					WriteHeader(PZI.Pencil, PZI.Pen, TotalChangesMade_Pencil, TotalChangesMade_Pen);
+					SGrid.PrepareGridForPrinting(PZI.gridvals);
 					SGrid.Print();
 					std::cout << std::endl << std::endl;
 					iteration++;
