@@ -169,6 +169,14 @@ struct RCB {
 	
 	virtual uint GetOffset(uint OffsetAmt) = 0;
 	virtual Cell& GetOffset(uint OffsetAmt, Cell* gv) = 0;
+
+	RCB(const RCB& rcb)
+	{
+		for (uint x = 0; x < 9; x++)
+		{
+			PossibleNums[x] = rcb.PossibleNums[x];
+		}
+	}
 };
 struct Row : RCB {
 	virtual uint GetOffset(uint OffsetAmt) override {
@@ -487,21 +495,15 @@ bool BruteSolve_itrl(PuzzleState& PZI, uint& it) {
 }
 void BruteSolve(PuzzleState& PZI, uint it) {
 	PuzzleState PZI2 = PuzzleState(PZI);
-	{
-
-		//todo 
-		while (!BruteSolve_itrl(PZI2, it)) {
-			std::cout << "INVALID \n";
-			std::cin.get();
-			BruteSolve(PZI, it+1);
-		}
 	
-		PZI = PuzzleState(PZI2);
-
-		std::cout << PZI2.Pen;
+	//todo 
+	while (!BruteSolve_itrl(PZI2, it)) {
+		std::cout << "INVALID \n";
+		std::cin.get();
+		BruteSolve(PZI, it+1);
 	}
-	std::cout << PZI2.Pen;
-
+	
+	PZI = PZI2;
 }
 
 void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
