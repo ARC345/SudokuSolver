@@ -116,11 +116,13 @@ struct Cell {
 
 };
 class SudGrid {
-	char grid[163] = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n";
+	char grid[164] = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n ";
 public:
 	void PrepareGridForPrinting(Cell* gv) {
 		uint x = 0;
-		for (char& c : grid)
+		for (uint z =0;z < 163; z++)
+		{
+			char& c = grid[z];
 			if (c != ' ' && c != '\n')
 			{
 				Cell& CurrCell = gv[x];
@@ -133,6 +135,7 @@ public:
 				}
 				x++;
 			}
+		}
 	}
 	inline void Print(){
 		for (uint x=0; x < 162; x++)
@@ -499,13 +502,13 @@ void BruteSolve(PuzzleState& PZI, uint it) {
 	PuzzleState PZI2 = PuzzleState(PZI);
 	
 	//todo 
-	while (!BruteSolve_itrl(PZI2, it)) {
+	while(!BruteSolve_itrl(PZI2, it)) {
 		std::cout << "INVALID \n";
 		std::cin.get();
-		BruteSolve(PZI, it+1);
+		it++;
+		PZI2 = PuzzleState(PZI);
 	}
-	
-	PZI = PZI2;
+	PZI = PuzzleState(PZI2);
 }
 
 void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
@@ -708,10 +711,9 @@ int main()
 					}
 					bBruteSolve = true;
 					BruteSolve(PZI);
-					if (PZI.IsSolved()) {
-						EndTimepoint = std::chrono::high_resolution_clock::now();
-						break;
-					}
+					EndTimepoint = std::chrono::high_resolution_clock::now();
+
+					break;
 				}
 			}
 				if (bDebugMode || bExtremeDebugMode) {
