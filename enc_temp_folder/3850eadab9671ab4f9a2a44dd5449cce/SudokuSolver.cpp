@@ -861,7 +861,7 @@ void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
 		switch (a)
 		{
 		case 'x':
-			std::cout << "Enter puzzle" << std::endl;
+			std::cout << "Enter puzzle in csv format (Comma Separated)" << std::endl;
 			pz = Puzzle.custom;
 			MakePuzzle(Puzzle);
 			bbreak = true;
