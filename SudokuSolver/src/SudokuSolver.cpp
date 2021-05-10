@@ -727,9 +727,11 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 		}
 
 		std::cout << std::endl;
-		GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
-		GridPrinter.Print();
-
+		if (bDebug)
+		{
+			GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
+			GridPrinter.Print();
+		}
 		while (true)
 		{
 			if (PZI2.IsSolved())
@@ -765,7 +767,8 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 			PZI2.Pencil = 0;
 			Solve(PZI2);
 			AdvancedSolve(PZI2);
-			std::cout << "\n" << PZI2.Pen << ":" << PZI2.Pencil << "\n";
+			if(bDebug)
+				std::cout << "\n" << PZI2.Pen << ":" << PZI2.Pencil << "\n";
 
 			if (PZI2.IsSolved())
 			{
@@ -805,7 +808,7 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 				}
 				else
 				{
-				break; // (While(true)).
+					break; // (While(true)).
 				}
 			}
 		}
@@ -828,7 +831,12 @@ void MakePuzzle(Puzzles& Puzzle)
 	{
 		char in;
 		std::cin >> in;
-		if (isdigit(in))
+		if (in == '#')
+		{
+			in = '#';
+		}
+		uint Num = in-'0';
+		if (isdigit(in)&& Num >= 0 && Num<=9)
 		{
 			Puzzle.custom[i] = in - '0';
 			i++;
@@ -838,6 +846,7 @@ void MakePuzzle(Puzzles& Puzzle)
 
 		if (in =='r')
 		{
+			std::cout <<"Reset" << "\n";
 			i=0;
 		}
 	}
@@ -861,7 +870,7 @@ void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
 		switch (a)
 		{
 		case 'x':
-			std::cout << "Enter puzzle" << std::endl;
+			std::cout << "Enter puzzle in text format" << std::endl;
 			pz = Puzzle.custom;
 			MakePuzzle(Puzzle);
 			bbreak = true;
