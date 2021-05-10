@@ -79,8 +79,27 @@ struct Puzzles {
 		0,0,0,0,0,0,0,0,0,
 		0,0,0,0,0,0,0,0,0
 	};
+	uint p7[81]{
+	8,1,2,7,5,3,6,4,9,
+	9,4,3,6,8,0,0,7,0,
+	6,7,5,4,9,1,2,8,3,
+	0,5,0,0,0,7,0,0,0,
+	0,0,0,0,4,5,7,0,0,
+	0,0,0,1,0,9,0,3,0,
+	5,2,1,9,7,4,3,6,8,
+	4,0,8,5,0,0,9,1,7,
+	0,9,0,0,1,0,4,5,2
+	};
 };
 struct Cell {
+	Cell(const Cell& C)
+	{
+		Num = C.Num;
+		INO = C.INO;
+		for (uint x =0;x<9;x++) {
+			PossibleNums[x] = C.PossibleNums[x];
+		}
+	}
 	Cell() :
 		Num(0),
 		INO(0)
@@ -140,9 +159,7 @@ public:
 			if (c != ' ' && c != '\n')
 			{
 				Cell& CurrCell = gv[x];
-				if (CurrCell.GetNum() != 0) {
-					c = CurrCell.GetNum() + '0';
-				}
+				c = CurrCell.GetNum() + '0';
 				x++;
 			}
 		}
@@ -244,12 +261,12 @@ public:
 		Pen = PZI.Pen;
 
 		for (uint x = 0; x < 9; x++) {
-			rows[x] = PZI.rows[x];
-			cols[x] = PZI.cols[x];
-			boxs[x] = PZI.boxs[x];
+			rows[x] = (PZI.rows[x]);
+			cols[x] = (PZI.cols[x]);
+			boxs[x] = (PZI.boxs[x]);
 		}
 		for (uint x = 0; x < 81; x++) {
-			gridvals[x] = PZI.gridvals[x];
+			gridvals[x] = Cell(PZI.gridvals[x]);
 		}
 	}
 	bool IsInvalid() {
@@ -259,6 +276,7 @@ public:
 
 		for (Cell& gz : gridvals)
 		{
+			if(gz.IsFilled()) continue;
 			rval=true;
 			for (bool& b : gz.PossibleNums)
 			{
@@ -268,12 +286,12 @@ public:
 					break;
 				}
 			}
-			if (rval)
+			if (!rval)
 			{
 				break;
 			}
 		}
-		return false;
+		return rval;
 	}
 	// are all cells filled
 	bool IsSolved() {
@@ -630,6 +648,10 @@ uint InceptionNo = 0;
 
 bool BruteSolve(PuzzleState& PZI, bool bDebug)
 {
+	if (PZI.IsSolved())
+	{
+		return true; 
+	}
 	Solve_clearPN_itrl(PZI);
 
 	InceptionNo++;
@@ -690,62 +712,121 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 	// For Every Possible No
 	for (uint x = 0; x<MinPnNo; x++)
 	{
-		uint it=MinPnNo;
+		PZI2 = PuzzleState(PZI);
+		SelectedCell = &PZI2.gridvals[SelectedCellNo];
+
+		uint it = x;
+
 		uint SelectedPN; 
 		for (uint z = 0; z<9; z++)
 		{
 			bool& zz = SelectedCell->PossibleNums[z];
 			if (zz)
 			{
+				if (it != 0)
+				{
+					it--;
+					continue;
+				}
 				SelectedPN = z;
-				it--;
+				SelectedCell->SetNum(SelectedPN + 1);
+
 				break;
 			}
 		}
 
-		SelectedCell->SetNum(SelectedPN+1);
-			
+		std::cout << std::endl;
 		GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
 		GridPrinter.Print();
 
 		while (true)
 		{
-			PZI2.Pen=0;
-			PZI2.Pencil=0;
+			if (PZI2.IsSolved())
+			{
+				PZI = PuzzleState(PZI2);
+				return true;
+			}
+			if (PZI2.IsInvalid())
+			{
+				PZI2 = PuzzleState(PZI);
+				SelectedCell = &PZI2.gridvals[SelectedCellNo];
+				
+				GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
+				GridPrinter.Print();
+
+				std::cout << "INVALID: Reset" << std::endl;
+				if (bDebug)
+				{
+					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
+					std::cout << "InceptionNo: " << InceptionNo << "\n"
+						<< "Selected Cell: " << SelectedCellNo
+						<< "\n[" << MinPnNo << "]: ";
+					SelectedCell->PrintPossibleNums();
+					std::cout << "------------------------------------------------------------------\n";
+					std::cout << std::endl;
+
+				}
+
+				break;
+			}
+
+			PZI2.Pen = 0;
+			PZI2.Pencil = 0;
 			Solve(PZI2);
 			AdvancedSolve(PZI2);
+			std::cout << "\n" << PZI2.Pen << ":" << PZI2.Pencil << "\n";
 
 			if (PZI2.IsSolved())
 			{
+				PZI = PuzzleState(PZI2);
 				return true;
 			}
-
 			if (PZI2.IsInvalid())
 			{
-				__debugbreak();
-				return false;
+				PZI2 = PuzzleState(PZI);
+				SelectedCell = &PZI2.gridvals[SelectedCellNo];
+				
+				GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
+				GridPrinter.Print();
+
+				std::cout << "INVALID: Reset" << std::endl;
+				if (bDebug)
+				{
+					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
+					std::cout << "InceptionNo: " << InceptionNo << "\n"
+						<< "Selected Cell: " << SelectedCellNo
+						<< "\n[" << MinPnNo << "]: ";
+					SelectedCell->PrintPossibleNums();
+					std::cout << "------------------------------------------------------------------\n";
+					std::cout << std::endl;
+
+				}
+
+				break;
 			}
 
 			if (PZI2.Pen == 0 && PZI2.Pencil == 0)
 			{
-				if (BruteSolve(PZI2, bDebug))
+				if((SelectedCell->IsFilled()) && BruteSolve(PZI2, bDebug))
 				{
+					PZI = PuzzleState(PZI2);
 					return true;
 				}
 				else
 				{
-					PZI2 = PuzzleState(PZI);
-					break;
+				break; // (While(true)).
 				}
 			}
 		}
-
-		GridPrinter.PrepareGridForPrinting(PZI2.gridvals);
-		GridPrinter.Print();
 	}
 
-	__debugbreak();
-	return true;
+	if (PZI.IsSolved())
+	{
+		return true;
+	}
+
+	--InceptionNo;
+	return false;
 }
 
 void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
@@ -795,7 +876,6 @@ void ChoosePuzzle(char& a, Puzzles& Puzzle ,uint*& pz) {
 		}
 	}
 }
-
 int main()
 {
 	while (true) {
@@ -922,10 +1002,6 @@ int main()
 		TP EndTimepoint;
 		TP StartTimepoint = std::chrono::high_resolution_clock::now();
 		while (true) {
-			if (PZI.IsInvalid()) {
-				__debugbreak();
-			}
-
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
