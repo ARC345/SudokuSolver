@@ -1,6 +1,8 @@
 #include <iostream>
 #include <chrono>
 #include <cctype>
+#include <ratio>
+#include <xtr1common>
 
 
 #define NewPage() for(uchar sksksk=0; sksksk<=100;sksksk++){std::cout << std::endl;}
@@ -169,7 +171,7 @@ class Timer
 
 private:
 	static Timer* Timer_;
-	Timer() = default;
+	Timer() : bIsActive(false), bIsPaused(true), PauseTime(0) {};
 	
 	uint bIsActive : 1;
 	uint bIsPaused : 1;
@@ -180,66 +182,61 @@ private:
 	long long PauseTime;
 public:
 	Timer(Timer& other) = delete;
-	void operator=(const GridPrinter&) = delete;
+	void operator=(const Timer&) = delete;
 
 	static Timer* Get()
 	{
 		if (Timer_ == nullptr) {
-			Timer_ = new GridPrinter;
+			Timer_ = new Timer;
 		}
 		return Timer_;
 	}
 
 	TP GetBeginTimepoint()	{return StartTimepoint;};
 
-	void Begin() { StartTimepoint = std::chrono::high_resolution_clock::now(); };
-	void Pause() { bIsPaused = true; PauseStartTimepoint = std::chrono::high_resolution_clock::now(); };
+	void Begin()  { bIsActive = true; StartTimepoint = std::chrono::high_resolution_clock::now(); };
+	void Pause()  { if(bIsPaused)return; bIsPaused = true; PauseStartTimepoint = std::chrono::high_resolution_clock::now(); };
+	void Clear()  { delete Timer_; Timer_ = nullptr; }
 	void Resume()
 	{
+		if (!bIsPaused) return;
 		bIsPaused = false;
-		PauseTime += (std::chrono::high_resolution_clock::now()).time_since_epoch().count()-(PauseStartTimepoint).time_since_epoch().count();
+		PauseTime += CalculatePauseTime();
 	};
-
-	long long GetTimeElapsed(duration x = std::chrono::microseconds)
+	long long CalculatePauseTime() 
+	{
+		if(!bIsPaused) return 0;
+		return (std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count() - std::chrono::time_point_cast<std::chrono::microseconds>(PauseStartTimepoint).time_since_epoch().count());
+	
+	}
+	//template <typename _To>
+	long long GetTimeElapsed()
 	{
 		long long start = 0;
-		long long end   = 0;
+
 		if (bIsActive)
 		{
+			start = std::chrono::time_point_cast<std::chrono::microseconds>(StartTimepoint).time_since_epoch().count();
 			if (bIsPaused)
 			{
-				start = std::chrono::time_point_cast<x>(StartTimepoint).time_since_epoch().count();
-				end = std::chrono::time_point_cast<x>(PauseStartTimepoint).time_since_epoch().count();
+				PauseTime += CalculatePauseTime();
 			}
-			else
-			{
-				start = std::chrono::time_point_cast<x>(StartTimepoint).time_since_epoch().count();
-				end = std::chrono::time_point_cast<x>(std::chrono::high_resolution_clock::now()).time_since_epoch().count();
-			} 
-			std::chrono::time_point_cast<x>(PauseTime);
-		return (end - start) - PauseTime;
+
+		return PauseTime - start;
 		}
 		return 0;
-	}
-}
+	};
+};
+class PuzzleState;
 class GridPrinter {
 	char grid[164] = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n ";
 public:
-	void PrintCM(const PuzzleState& PZI) const
-	{
-		std::cout << "Changes Made Pencil (Current Iteration): " << PZI.Pencil << std::endl;
-		std::cout << "Changes Made Pen (Current Iteration):    " << PZI.Pen << std::endl;
-	}
-	void PrintTCM(const PuzzleState& PZI) const
-	{
-		std::cout << "Changes Made Pencil (In Total): " << PZI.TotalChangesMade_Pencil << std::endl;
-		std::cout << "Changes Made Pen (In Total):    " << PZI.TotalChangesMade_Pen << std::endl << std::endl;
-	}
-	void PrintHeader(const PuzzleState& PZI) const
-	{
-		PrintCM(PZI);
-		PrintTCM(PZI);
-	}
+	void PrintCM(const PuzzleState& PZI) const;
+
+	void PrintTCM(const PuzzleState& PZI) const;
+
+	void PrintHeader(const PuzzleState& PZI) const;
+
 	void PrepareGridForPrinting(Cell* gv) {
 		uchar x = 0;
 		for (uchar z =0;z < 163; z++)
@@ -893,7 +890,7 @@ int main()
 				break;
 			}
 			case 'd': {
-				DebugLevel = EDebugLevel::Advanced;
+				DebugLevel = EDebugLevel::Extreme;
 				bbreak = true;
 				break;
 			}
@@ -925,7 +922,7 @@ int main()
 
 			if (PZI.Pen == 0 && PZI.Pencil == 0) {
 				if (PZI.IsSolved()) {
-					Timer::Get()->End();
+					Timer::Get()->Pause();
 					break;
 				}
 
@@ -933,12 +930,12 @@ int main()
 				bAdvanced = true;
 				if (PZI.Pen == 0 && PZI.Pencil == 0) {
 					if (PZI.IsSolved()) {
-						Timer::Get()->End();
+						Timer::Get()->Pause();
 						break;
 					}
 					bBruteSolve = true;
 					BruteSolve(PZI, DebugLevel > 0);
-					Timer::Get()->End();
+					Timer::Get()->Pause();
 
 					break;
 				}
@@ -979,15 +976,19 @@ int main()
 				switch (a)
 				{
 				case 'm': {
+					Timer::Get()->Clear();
 					NewPage();
 					bbreak = true;
 					break;
 				}
-				case 's': {
+				case 's': { 
 					GridPrinter::Get()->PrintCM(PZI);
 					Timer::Get()->Pause();
-					std::cout << "TimeTaken (In Total): " << Timer::GetTimeElapsed() << " microseconds" << std::endl << std::endl;
-					std::cout << "TimeTaken (In Total): " << Timer::GetTimeElapsed(std::chrono::seconds) << " seconds" << std::endl << std::endl;
+					long long ElapsedTime_microseconds = (long long)Timer::Get()->GetTimeElapsed();
+					std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds	<< " microseconds"	<< std::endl << std::endl;
+					std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds/1000000.f << " seconds" << std::endl << std::endl;
+					//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
+					//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
 					std::cout << "Press #m + enter# to return to menu" << std::endl;
 					bbreak = false;
 					break;
@@ -1000,4 +1001,20 @@ int main()
 			}
 		}
 	}
+}
+
+void GridPrinter::PrintCM(const PuzzleState& PZI) const
+{
+	std::cout << "Changes Made Pencil (Current Iteration): " << PZI.Pencil << std::endl;
+	std::cout << "Changes Made Pen (Current Iteration):    " << PZI.Pen << std::endl;
+}
+void GridPrinter::PrintTCM(const PuzzleState& PZI) const
+{
+	std::cout << "Changes Made Pencil (In Total): " << PZI.TotalChangesMade_Pencil << std::endl;
+	std::cout << "Changes Made Pen (In Total):    " << PZI.TotalChangesMade_Pen << std::endl << std::endl;
+}
+void GridPrinter::PrintHeader(const PuzzleState& PZI) const
+{
+	PrintCM(PZI);
+	PrintTCM(PZI);
 }
