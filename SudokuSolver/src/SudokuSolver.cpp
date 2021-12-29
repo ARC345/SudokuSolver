@@ -227,7 +227,7 @@ public:
 				PauseTime += CalculatePauseTime();
 			}
 
-		return PauseTime - start;
+		return std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count() - start - PauseTime;
 		}
 		return 0;
 	};
@@ -951,32 +951,35 @@ int main()
 			continue;
 		}
 		Timer::Get()->Begin();
-
+		Timer::Get()->Pause();
 		while (1) {
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
 			bool bBruteSolve = false;
 
+			Timer::Get()->Resume();
 			PZI.Solve();
+			Timer::Get()->Pause();
 
 			if (PZI.Pen == 0 && PZI.Pencil == 0) {
 				if (PZI.IsSolved()) {
-					Timer::Get()->Pause();
 					break;
 				}
 
+				Timer::Get()->Resume();
 				PZI.AdvancedSolve();
+				Timer::Get()->Pause();
+
 				bAdvanced = true;
 				if (PZI.Pen == 0 && PZI.Pencil == 0) {
 					if (PZI.IsSolved()) {
-						Timer::Get()->Pause();
 						break;
 					}
 					bBruteSolve = true;
+					Timer::Get()->Resume();
 					BruteSolve(PZI, DebugLevel > 0);
 					Timer::Get()->Pause();
-
 					break;
 				}
 			}
@@ -1024,7 +1027,6 @@ int main()
 			}
 			case 's': { 
 				GridPrinter::Get()->PrintCM(PZI);
-				Timer::Get()->Pause();
 				long long ElapsedTime_microseconds = (long long)Timer::Get()->GetTimeElapsed();
 				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds	<< " microseconds"	<< std::endl << std::endl;
 				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds/1000000.f << " seconds" << std::endl << std::endl;
