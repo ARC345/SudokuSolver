@@ -3,10 +3,10 @@
 #include <cctype>
 #include <ratio>
 #include <xtr1common>
+#include "../Cell.h"
 
 
 #define NewPage() for(uchar sksksk=0; sksksk<=100;sksksk++){std::cout << std::endl;}
-
 
 using uint = unsigned int;
 using uchar = unsigned char;
@@ -107,25 +107,30 @@ public:
 		return Puzzles_;
 	}
 };
-
-struct Cell {
-	Cell(const Cell& C)
+/*
+struct CCell {
+	CCell(const CCell& C)
 	{
 		Num = C.Num;
 		INO = C.INO;
-		for (uchar x =0;x<9;x++) {
+		for (uint8_t x =0;x<9;x++) {
 			PossibleNums[x] = C.PossibleNums[x];
 		}
 	}
-	Cell() :
+	CCell() :
 		Num(0),
 		INO(0)
 	{
+		// set all bits to true
+		~(_PossibleNums & 0);
+
 		for (bool& x : PossibleNums) {
 			x = true;
 		}
 	}
+
 	uchar INO;
+	uint16_t _PossibleNums : 9;
 	bool PossibleNums[9];
 
 	void PrintPossibleNums() const
@@ -164,7 +169,7 @@ struct Cell {
 	}
 private:
 	uchar Num;
-};
+};*/
 class Timer
 {
 	using TP = std::chrono::steady_clock::time_point;
@@ -237,22 +242,22 @@ public:
 
 	void PrintHeader(const PuzzleState& PZI) const;
 
-	void PrepareGridForPrinting(Cell* gv) {
+	void PrepareGridForPrinting(CCell* gv) {
 		uchar x = 0;
-		for (uchar z =0;z < 163; z++)
+		for (uchar i =0;i < 163; i++)
 		{
-			char& c = grid[z];
+			char& c = grid[i];
 			if (c != ' ' && c != '\n')
 			{
-				Cell& CurrCell = gv[x];
+				CCell& CurrCell = gv[x];
 				c = CurrCell.GetNum() + '0';
 				x++;
 			}
 		}
 	}
 	void Print() const{
-		for (uchar x=0; x < 162; x++)
-			std::cout << grid[x];
+		for (uchar i=0; i < 162; i++)
+			std::cout << grid[i];
 	}
 
 private:
@@ -283,6 +288,9 @@ struct RCB {
 	}
 	bool PossibleNums[9];
 
+	virtual void OnClear(CCell& _Cell) = 0;
+	virtual bool IsClear(CCell& _Cell) = 0;
+
 	uchar begin;
 	uchar end;
 
@@ -305,35 +313,45 @@ struct RCB {
 	inline void SetPN(bool b, uchar pos, uint& CPencil) { if (pos < 9 && pos >= 0) { PossibleNums[pos] = b; CPencil++; } }
 	
 	virtual uchar GetOffset(const uchar OffsetAmt) const = 0;
-	virtual Cell& GetOffset(const uchar OffsetAmt, Cell* gv) const = 0;
+	virtual CCell& GetOffset(const uchar OffsetAmt, CCell* gv) const = 0;
 
 	RCB(const RCB& rcb)
 	{
-		for (uchar x = 0; x < 9; x++)
+		for (uchar i = 0; i < 9; i++)
 		{
-			PossibleNums[x] = rcb.PossibleNums[x];
+			PossibleNums[i] = rcb.PossibleNums[i];
 		}
 	}
 };
+
 struct Row : RCB {
+	
+	virtual void OnClear(CCell& _Cell) override { _Cell.bClearedRow = 1u; }
+	virtual bool IsClear(CCell& _Cell) override { return _Cell.bClearedRow; };
 	virtual uchar GetOffset(const uchar OffsetAmt) const override {
 		return begin + OffsetAmt;
 	};
-	virtual Cell& GetOffset(const uchar OffsetAmt, Cell* gv) const override {
+	virtual CCell& GetOffset(const uchar OffsetAmt, CCell* gv) const override {
 		return gv[GetOffset(OffsetAmt)];
 	};
 };
 struct Col : RCB
 {
+	virtual void OnClear(CCell& _Cell) override { _Cell.bClearedCol = 1u; }
+	virtual bool IsClear(CCell& _Cell) override { return _Cell.bClearedCol; };
+
 	virtual uchar GetOffset(const uchar OffsetAmt) const override {
 		return begin + (OffsetAmt * 9);
 	};
-	virtual Cell& GetOffset(const uchar OffsetAmt, Cell* gv) const override {
+	virtual CCell& GetOffset(const uchar OffsetAmt, CCell* gv) const override {
 		return gv[GetOffset(OffsetAmt)];
 	};
 };
 struct Box : RCB
 {
+	virtual void OnClear(CCell& _Cell) override { _Cell.bClearedBox = 1u; }
+	virtual bool IsClear(CCell& _Cell) override { return _Cell.bClearedBox; };
+	
 	virtual uchar GetOffset(const uchar OffsetAmt)const override {
 		uchar z=0;
 		if (OffsetAmt <= 2)
@@ -344,7 +362,7 @@ struct Box : RCB
 			z = 2;
 		return begin + OffsetAmt % 3 + 9 * z; // 00|01|02|09|
 	};
-	virtual Cell& GetOffset(const uchar OffsetAmt, Cell* gv) const override {
+	virtual CCell& GetOffset(const uchar OffsetAmt, CCell* gv) const override {
 		return gv[GetOffset(OffsetAmt)];
 	};
 };
@@ -354,7 +372,7 @@ public:
 	Row rows[9];
 	Col cols[9];
 	Box boxs[9];
-	Cell gridvals[81];
+	CCell gridvals[81];
 
 	uint Pencil;
 	uint Pen;
@@ -370,13 +388,13 @@ public:
 		TotalChangesMade_Pen = PZI.TotalChangesMade_Pen;
 		TotalChangesMade_Pencil = PZI.TotalChangesMade_Pencil;
 
-		for (uchar x = 0; x < 9; x++) {
-			rows[x] = (PZI.rows[x]);
-			cols[x] = (PZI.cols[x]);
-			boxs[x] = (PZI.boxs[x]);
+		for (uchar i = 0; i < 9; i++) {
+			rows[i] = (PZI.rows[i]);
+			cols[i] = (PZI.cols[i]);
+			boxs[i] = (PZI.boxs[i]);
 		}
-		for (uchar x = 0; x < 81; x++) {
-			gridvals[x] = Cell(PZI.gridvals[x]);
+		for (uchar i = 0; i < 81; i++) {
+			gridvals[i] = CCell(PZI.gridvals[i]);
 		}
 	}
 
@@ -389,26 +407,27 @@ public:
 	bool IsInvalid() {
 
 		Solve_clearPN_itrl();
-		bool rval = true;
+		bool binvalid = true;
 
-		for (Cell& gz : gridvals)
+		for (CCell& cl : gridvals)
 		{
-			if(gz.IsFilled()) continue;
-			rval=true;
-			for (bool& b : gz.PossibleNums)
+			if(cl.bSet) continue;
+			binvalid=true;
+			
+			for (uint8_t i = 0; i < 9; i++)
 			{
-				if (b)
+				if (cl.Data & (0x01 << i))
 				{
-					rval = false;
+					binvalid = false;
 					break;
 				}
 			}
-			if (!rval)
-			{
+			if (binvalid) { 
+				__debugbreak();
 				break;
 			}
 		}
-		return rval;
+		return binvalid;
 	}
 	bool IsSolved() {
 		for (auto& gv: gridvals) {
@@ -455,52 +474,60 @@ uchar GetRowNo(uchar CellNo) {
 uchar GetColNo(uchar CellNo) {
 	return (CellNo % 9) + 1;
 }
-void ExtremeDebug(Cell* gridvals, uint& CPencil, uint& CPen) {
-	uchar currRN = 1;
-	for (uchar x = 0; x < 81; x++) {
-		std::cout << "Cell No: " << x << "	:	";
-		Cell& currCell = gridvals[x];
-		if (currCell.IsFilled()) {
-			std::cout << "Filled: " << gridvals[x].GetNum();
-			std::cout << std::endl;
-		}
-		else {
-			for (uchar y = 0; y < 9; y++) {
-				std::cout << y + 1 << ": " << bool(currCell.PossibleNums[y] == true) << "	";
-			}
-			for (uchar y = 0; y < 9; y++) {
-				if (currCell.PossibleNums[y] == true)
-					std::cout << y + 1 << " ";
-			}
-
-			std::cout << std::endl;
-		}
-
-		if (currRN != GetRowNo(x + 1)) {
-			currRN = GetRowNo(x + 1);
-			std::cout << std::endl;
-		}
-	}
+void ExtremeDebug(CCell* gridvals, uint& CPencil, uint& CPen) {
+	//uchar currRN = 1;
+	//for (uchar x = 0; x < 81; x++) {
+	//	std::cout << "CCell No: " << x << "	:	";
+	//	CCell& currCell = gridvals[x];
+	//	if (currCell.bSet) {
+	//		std::cout << "Filled: " << gridvals[x].GetNum();
+	//		std::cout << std::endl;
+	//	}
+	//	else {
+	//		for (uchar y = 0; y < 9; y++) {
+	//			std::cout << y + 1 << ": " << bool(currCell.PossibleNums[y] == true) << "	";
+	//		}
+	//		for (uchar y = 0; y < 9; y++) {
+	//			if (currCell.PossibleNums[y] == true)
+	//				std::cout << y + 1 << " ";
+	//		}
+	//
+	//		std::cout << std::endl;
+	//	}
+	//
+	//	if (currRN != GetRowNo(x + 1)) {
+	//		currRN = GetRowNo(x + 1);
+	//		std::cout << std::endl;
+	//	}
+	//}
 }
 
 void PuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 	// for every row reduce possibilities
 	for (uchar x = 0; x < 9; x++)
-		for (uchar y = 0; y < 9; y++) {	
+	{
+		for (uchar y = 0; y < 9; y++)
+		{	
 			RCB& CR = _RCB[x];				
-			Cell& CC = CR.GetOffset(y, gridvals);			// Current Cell alias
-			if (CC.IsFilled())				// if CurrCell is filled
-				if (CC.INO < 3) {
-					CC.INO++;
-					for (uchar z = 0; z < 9; z++) {			// for every Cell in row (ECR)
-						Cell& CurrCellR = CR.GetOffset(z, gridvals);	// Current Cell R is the first cell row + iteration to get the offset or column
+			CCell& CC = CR.GetOffset(y, gridvals);			// Current CCell alias
+			if (CC.bSet && !_RCB->IsClear(CC))
+			{	// if CurrCell is filled
+				for (uchar z = 0; z < 9; z++)
+				{			// for every CCell in row (ECR)
+					CCell& CurrCellR = CR.GetOffset(z, gridvals);	// Current CCell R is the first CCell row + iteration to get the offset or column
+					if (!CurrCellR.bSet)
+					{
 						uchar PV = CC.GetNum();
-						CurrCellR.PossibleNums[PV-1] = false;
+
+						CurrCellR.Data &= ~(1u << PV - 1);
 						Pencil++;
 					}
-					CR.PossibleNums[CC.GetNum() - 1] = false;
 				}
+				CR.PossibleNums[CC.GetNum() - 1] = false;
+				_RCB->OnClear(CC);
+			}
 		}
+	}
 }
 void PuzzleState::Solve_clearPN_itrl() {
 	Solve_clearPN_itrl(rows);
@@ -508,62 +535,77 @@ void PuzzleState::Solve_clearPN_itrl() {
 	Solve_clearPN_itrl(boxs);
 }
 void PuzzleState::Solve() {
-	// for every cell make changes
-	for (Cell & CC : gridvals) {
-		Solve_clearPN_itrl();
+	Solve_clearPN_itrl();
+	// for every CCell make changes
+	for (CCell & CC : gridvals) {
+		if (CC.bSet) continue;
 
 		uchar NoOfPN = 0;
 		uchar LastPN = 0;
-		for (uchar CR = 0; CR < 9; CR++) {
-			if (CC.PossibleNums[CR]) {
+
+		for (uint8_t i = 0; i < 9; i++)
+		{
+			if (CC.Data & (0x01 << i))
+			{
 				NoOfPN++;
-				LastPN = CR;
+				LastPN = i;
 			}
 		}
-		if (NoOfPN == 1) {
-			if (!CC.IsFilled()) {
-				CC.SetNum(LastPN + 1);
-				++Pen;
 
-				Solve_clearPN_itrl();
-			}
+		if (NoOfPN == 1) {
+			CC.SetNum(LastPN + 1);
+			++Pen;
 		}
 	}
 }
 
 void PuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 	Solve_clearPN_itrl();
-	for (uchar x = 0; x < 9; x++)
-		for (uchar y = 0; y < 9; y++)
-		{
-			RCB& RCB1 = _RCB[x];
-			Cell& C1 = RCB1.GetOffset(y, gridvals);
 
-			if (C1.IsFilled()) continue;
-			for (uchar PV = 0; PV < 9; PV++)
-				if (C1.PossibleNums[PV])
+	// iteration through RCBs
+	for (uint8_t i = 0; i < 9; i++)
+	{
+		RCB& rcb = _RCB[i];
+
+		// iteration through Cells in RCB
+		for (uint8_t ii = 0; i < 9; i++)
+		{
+			CCell& cl = rcb.GetOffset(ii, gridvals);
+			if (cl.bSet) continue;
+			
+			// iteration through PV in Cells in RCB
+			for (uint8_t iii = 0; iii < 9; iii++)
+			{
+				if (cl.Data & (0x01 << iii))
 				{
 					bool bFill = false;
-					for (uchar z = 0; z < 9; z++)
-						if (y != z) {
-							Cell& C2 = RCB1.GetOffset(z, gridvals);
-							if (C2.IsFilled()) continue;
-							if (C2.PossibleNums[PV]) {
+
+					// iteration through other Cells in RCB
+					for (uint8_t iiii = 0; iiii < 9; iiii++) {
+						if (ii != iiii)
+						{
+							CCell& cl2 = rcb.GetOffset(iiii, gridvals);
+							if (cl2.bSet) continue;
+
+							if (cl2.Data & (0x01 << iii)) {
 								bFill = false;
-								break;		// jump out of loop CC2
+								break;
 							}
 							else {
 								bFill = true;
 								continue;
 							}
 						}
+					}
+
 					if (bFill)
 					{
-						C1.SetNum(PV + 1);
-						Solve_clearPN_itrl();
+						cl.SetNum(iii+1);
 					}
 				}
+			}
 		}
+	}
 }
 void PuzzleState::AdvancedSolve() {
 
@@ -585,24 +627,26 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 	InceptionNo++;
 
 	uchar SelectedCellNo;
-	uchar MinPnNo = 10;
-	Cell* SelectedCell = &PZI.gridvals[0];
+	uchar MinPnNo = 10; // impossible
+	CCell* SelectedCell = &PZI.gridvals[0];
 
-	// Find Cell with least possible values
+	// Find CCell with least possible values
 	for (uchar x = 0; x<81; x++)
 	{
-		Cell* CC = &PZI.gridvals[x];
+		CCell* CC = &PZI.gridvals[x];
 
-		if(CC->IsFilled()) continue;
+		if(CC->bSet) continue;
 
 		uchar PnNo = 0;
-		for (bool& b : CC->PossibleNums)
+
+		for (uint8_t i = 0; i < 9; i++)
 		{
-			if (b)
+			if (CC->Data & (0x01 << i))
 			{
 				PnNo++;
 			}
 		}
+
 		if(PnNo == 2)
 		{
 			MinPnNo = 2;
@@ -623,9 +667,9 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 	{
 		std::cout << "------------------------------------------------------------------\n";
 		std::cout << "InceptionNo: "<< InceptionNo << "\n"
-				  <<"Selected Cell: " <<SelectedCellNo	
+				  <<"Selected CCell: " <<SelectedCellNo	
 				  << "\n[" << MinPnNo << "]: ";
-		SelectedCell->PrintPossibleNums();
+		SelectedCell->Print();
 		std::cout << "------------------------------------------------------------------\n";
 		std::cout << std::endl;
 
@@ -644,19 +688,16 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 
 		uchar it = x;
 
-		uchar SelectedPN; 
-		for (uchar z = 0; z<9; z++)
+		for (uint8_t i = 0; i < 9; i++)
 		{
-			bool& zz = SelectedCell->PossibleNums[z];
-			if (zz)
+			if (SelectedCell->Data & (0x01 << i))
 			{
 				if (it != 0)
 				{
 					it--;
 					continue;
 				}
-				SelectedPN = z;
-				SelectedCell->SetNum(SelectedPN + 1);
+				SelectedCell->SetNum(i + 1);
 
 				break;
 			}
@@ -688,9 +729,9 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 
 					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
 					std::cout << "InceptionNo: " << InceptionNo << "\n"
-						<< "Selected Cell: " << SelectedCellNo
+						<< "Selected CCell: " << SelectedCellNo
 						<< "\n[" << MinPnNo << "]: ";
-					SelectedCell->PrintPossibleNums();
+					SelectedCell->Print();
 					std::cout << "------------------------------------------------------------------\n";
 					std::cout << std::endl;
 
@@ -724,9 +765,9 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 
 					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
 					std::cout << "InceptionNo: " << InceptionNo << "\n"
-						<< "Selected Cell: " << SelectedCellNo
+						<< "Selected CCell: " << SelectedCellNo
 						<< "\n[" << MinPnNo << "]: ";
-					SelectedCell->PrintPossibleNums();
+					SelectedCell->Print();
 					std::cout << "------------------------------------------------------------------\n";
 					std::cout << std::endl;
 
@@ -737,7 +778,7 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 
 			if (PZI2.Pen == 0 && PZI2.Pencil == 0)
 			{
-				if((SelectedCell->IsFilled()) && BruteSolve(PZI2, bDebug))
+				if((SelectedCell->bSet) && BruteSolve(PZI2, bDebug))
 				{
 					PZI = PuzzleState(PZI2);
 					return true;
@@ -845,7 +886,7 @@ void ChoosePuzzle(char& a, uchar*& pz) {
 
 int main()
 {
-	while (true) {
+	while (1) {
 		PuzzleState PZI;
 		uchar* pz = Puzzles::Get()->p1;
 
@@ -855,8 +896,7 @@ int main()
 		PZI.SetupGridvals(pz);
 		PZI.SetupRCB();
 		NewPage();
-
-		uchar iteration = 1;
+		uint16_t iteration = 1;
 
 		GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
 		GridPrinter::Get()->Print();
@@ -912,7 +952,7 @@ int main()
 		}
 		Timer::Get()->Begin();
 
-		while (true) {
+		while (1) {
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
@@ -940,65 +980,66 @@ int main()
 					break;
 				}
 			}
-				if (DebugLevel > 0) {
-					if (DebugLevel == EDebugLevel::Extreme)
-						ExtremeDebug(PZI.gridvals, PZI.Pencil, PZI.Pen);
-					if (bBruteSolve)
-						std::cout << "Iterations: " << iteration << " Type: BRUTE" << std::endl;
-					else if (bAdvanced)
-						std::cout << "Iterations: " << iteration << " Type: ADVANCED" << std::endl;
-					else
-						std::cout << "Iterations: " << iteration << " Type: BASIC" << std::endl;
+			if (DebugLevel > 0) {
+				if (DebugLevel == EDebugLevel::Extreme)
+					ExtremeDebug(PZI.gridvals, PZI.Pencil, PZI.Pen);
+				if (bBruteSolve)
+					std::cout << "Iterations: " << iteration << " Type: BRUTE" << std::endl;
+				else if (bAdvanced)
+					std::cout << "Iterations: " << iteration << " Type: ADVANCED" << std::endl;
+				else
+					std::cout << "Iterations: " << iteration << " Type: BASIC" << std::endl;
 
-					GridPrinter::Get()->PrintHeader(PZI);
-					GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
-					GridPrinter::Get()->Print();
-					std::cout << std::endl << std::endl;
-					iteration++;
+				GridPrinter::Get()->PrintHeader(PZI);
+				GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
+				GridPrinter::Get()->Print();
+				std::cout << std::endl << std::endl;
+				iteration++;
 
-					if (DebugLevel == EDebugLevel::Extreme) {
-						std::cin.get();
-					}
-				}
-				PZI.UpdateTCM();
-			}
-			std::cout << std::endl << std::endl << std::endl;
-			GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
-			GridPrinter::Get()->Print();
-			std::cout << std::endl << std::endl << std::endl;
-
-			std::cout << "Press #m + enter# to return to menu" << std::endl;
-			std::cout << "Press #s + enter# to show stats" << std::endl;
-
-			bbreak = false;
-			while (!bbreak) {
-				std::cin >> a;
-				switch (a)
-				{
-				case 'm': {
-					Timer::Get()->Clear();
-					NewPage();
-					bbreak = true;
-					break;
-				}
-				case 's': { 
-					GridPrinter::Get()->PrintCM(PZI);
-					Timer::Get()->Pause();
-					long long ElapsedTime_microseconds = (long long)Timer::Get()->GetTimeElapsed();
-					std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds	<< " microseconds"	<< std::endl << std::endl;
-					std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds/1000000.f << " seconds" << std::endl << std::endl;
-					//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
-					//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
-					std::cout << "Press #m + enter# to return to menu" << std::endl;
-					bbreak = false;
-					break;
-				}
-				default: {
-					std::cout << "InvalidCommand" << std::endl;
-					bbreak = false;
-					break;
+				if (DebugLevel == EDebugLevel::Extreme) {
+					std::cin.get();
 				}
 			}
+			PZI.UpdateTCM();
+		}
+
+		std::cout << std::endl << std::endl << std::endl;
+		GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
+		GridPrinter::Get()->Print();
+		std::cout << std::endl << std::endl << std::endl;
+
+		std::cout << "Press #m + enter# to return to menu" << std::endl;
+		std::cout << "Press #s + enter# to show stats" << std::endl;
+
+		bbreak = false;
+		while (!bbreak) {
+			std::cin >> a;
+			switch (a)
+			{
+			case 'm': {
+				Timer::Get()->Clear();
+				NewPage();
+				bbreak = true;
+				break;
+			}
+			case 's': { 
+				GridPrinter::Get()->PrintCM(PZI);
+				Timer::Get()->Pause();
+				long long ElapsedTime_microseconds = (long long)Timer::Get()->GetTimeElapsed();
+				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds	<< " microseconds"	<< std::endl << std::endl;
+				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds/1000000.f << " seconds" << std::endl << std::endl;
+				//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
+				//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
+				std::cout << "Press #m + enter# to return to menu" << std::endl;
+				bbreak = false;
+				break;
+			}
+			default: {
+				std::cout << "InvalidCommand" << std::endl;
+				bbreak = false;
+				break;
+			}
+		}
 		}
 	}
 }
