@@ -107,69 +107,6 @@ public:
 		return Puzzles_;
 	}
 };
-/*
-struct CCell {
-	CCell(const CCell& C)
-	{
-		Num = C.Num;
-		INO = C.INO;
-		for (uint8_t x =0;x<9;x++) {
-			PossibleNums[x] = C.PossibleNums[x];
-		}
-	}
-	CCell() :
-		Num(0),
-		INO(0)
-	{
-		// set all bits to true
-		~(_PossibleNums & 0);
-
-		for (bool& x : PossibleNums) {
-			x = true;
-		}
-	}
-
-	uchar INO;
-	uint16_t _PossibleNums : 9;
-	bool PossibleNums[9];
-
-	void PrintPossibleNums() const
-	{
-		for (uchar x = 0; x < 9; x++)
-		{
-			if (PossibleNums[x])
-			{
-				std::cout << x+1 << "|";
-			}
-		}
-	}
-
-	bool SetNum(uchar x, bool bAdd = false) {
-		if (!IsFilled() && x <= uchar(9-bAdd) && x > 0) {
-			Num = x + bAdd;
-			INO = 0;
-			return true;
-		}
-		//__debugbreak();
-		return false;
-	}
-	bool SetNum(uchar x, uint& CPencil, uint& CPen, bool bAdd = false) {
-		if (SetNum(x, bAdd)) {
-			CPen++;
-			return true;
-		}
-		return false;
-	}
-	uchar GetNum() const
-	{
-		return Num;
-	}
-	bool IsFilled() {
-		return (Num!=0);
-	}
-private:
-	uchar Num;
-};*/
 class Timer
 {
 	using TP = std::chrono::steady_clock::time_point;
@@ -282,46 +219,14 @@ Timer* Timer::Timer_ = nullptr;
 
 // row column block
 struct RCB {
-	RCB()
-	{
-		SetPN(true);
-	}
-	bool PossibleNums[9];
-
 	virtual void OnClear(CCell& _Cell) = 0;
 	virtual bool IsClear(CCell& _Cell) = 0;
 
 	uchar begin;
 	uchar end;
 
-	void SetPN(bool b1) {
-		for (bool& bx : PossibleNums)
-			bx = b1;
-	}
-	void SetPN(bool b1,bool b2,bool b3,bool b4,bool b5,bool b6,bool b7,bool b8,bool b9) {
-		PossibleNums[0] = b1;
-		PossibleNums[1] = b2;
-		PossibleNums[2] = b3;
-		PossibleNums[3] = b4;
-		PossibleNums[4] = b5;
-		PossibleNums[5] = b6;
-		PossibleNums[6] = b7;
-		PossibleNums[7] = b8;
-		PossibleNums[8] = b9;
-	}
-	inline void SetPN(bool b, uchar pos) { if (pos < 9 && pos >= 0)PossibleNums[pos] = b; }
-	inline void SetPN(bool b, uchar pos, uint& CPencil) { if (pos < 9 && pos >= 0) { PossibleNums[pos] = b; CPencil++; } }
-	
 	virtual uchar GetOffset(const uchar OffsetAmt) const = 0;
 	virtual CCell& GetOffset(const uchar OffsetAmt, CCell* gv) const = 0;
-
-	RCB(const RCB& rcb)
-	{
-		for (uchar i = 0; i < 9; i++)
-		{
-			PossibleNums[i] = rcb.PossibleNums[i];
-		}
-	}
 };
 
 struct Row : RCB {
@@ -407,7 +312,7 @@ public:
 	bool IsInvalid() {
 
 		Solve_clearPN_itrl();
-		bool binvalid = true;
+		bool binvalid = false;
 
 		for (CCell& cl : gridvals)
 		{
@@ -474,33 +379,6 @@ uchar GetRowNo(uchar CellNo) {
 uchar GetColNo(uchar CellNo) {
 	return (CellNo % 9) + 1;
 }
-void ExtremeDebug(CCell* gridvals, uint& CPencil, uint& CPen) {
-	//uchar currRN = 1;
-	//for (uchar x = 0; x < 81; x++) {
-	//	std::cout << "CCell No: " << x << "	:	";
-	//	CCell& currCell = gridvals[x];
-	//	if (currCell.bSet) {
-	//		std::cout << "Filled: " << gridvals[x].GetNum();
-	//		std::cout << std::endl;
-	//	}
-	//	else {
-	//		for (uchar y = 0; y < 9; y++) {
-	//			std::cout << y + 1 << ": " << bool(currCell.PossibleNums[y] == true) << "	";
-	//		}
-	//		for (uchar y = 0; y < 9; y++) {
-	//			if (currCell.PossibleNums[y] == true)
-	//				std::cout << y + 1 << " ";
-	//		}
-	//
-	//		std::cout << std::endl;
-	//	}
-	//
-	//	if (currRN != GetRowNo(x + 1)) {
-	//		currRN = GetRowNo(x + 1);
-	//		std::cout << std::endl;
-	//	}
-	//}
-}
 
 void PuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 	// for every row reduce possibilities
@@ -523,7 +401,6 @@ void PuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 						Pencil++;
 					}
 				}
-				CR.PossibleNums[CC.GetNum() - 1] = false;
 				_RCB->OnClear(CC);
 			}
 		}
@@ -601,6 +478,7 @@ void PuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 					if (bFill)
 					{
 						cl.SetNum(iii+1);
+						++Pen;
 					}
 				}
 			}
@@ -972,7 +850,7 @@ int main()
 				Timer::Get()->Pause();
 
 				bAdvanced = true;
-				if (PZI.Pen == 0 && PZI.Pencil == 0) {
+				if (PZI.Pen == 0 && PZI.Pencil == 0 && false) {
 					if (PZI.IsSolved()) {
 						break;
 					}
@@ -984,8 +862,6 @@ int main()
 				}
 			}
 			if (DebugLevel > 0) {
-				if (DebugLevel == EDebugLevel::Extreme)
-					ExtremeDebug(PZI.gridvals, PZI.Pencil, PZI.Pen);
 				if (bBruteSolve)
 					std::cout << "Iterations: " << iteration << " Type: BRUTE" << std::endl;
 				else if (bAdvanced)
