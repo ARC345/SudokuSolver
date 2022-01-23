@@ -1,0 +1,3 @@
+[submodule "SudokuSolver/src/timer"]
+	path = SudokuSolver/src/timer
+	url = https://gist.github.com/75b8b46af8c0d3e5060185b951b5e42a.git

@@ -4,27 +4,29 @@
 #include <ratio>
 #include <xtr1common>
 #include "../Cell.h"
+#include "timer/Timer.h"
+#include <string>
 
+#define NewPage() for(uchar sksksk=0; sksksk<=100;sksksk++){ std::cout << std::endl;}
 
-#define NewPage() for(uchar sksksk=0; sksksk<=100;sksksk++){std::cout << std::endl;}
-
-using uint = unsigned int;
 using uchar = unsigned char;
-enum PuzzleDifficulty {
+
+enum EPuzzleDifficulty : uint8_t
+{
 	VeryEasy,
 	Easy,
 	Medium,
 	Hard,
 	VeryHard
 };
-enum EDebugLevel : uchar
+enum EDebugLevel : uint8_t
 {
 	None=0,
 	Basic=1,
 	Extreme=2
 
 };
-struct Puzzles {
+struct SPuzzles {
 	uchar custom[81];
 	uchar p1[81]{
 		0,0,0,0,0,1,9,0,4,
@@ -93,129 +95,58 @@ struct Puzzles {
 		0,0,0,0,0,0,0,0,0
 	};
 private:
-	static Puzzles* Puzzles_;
-	Puzzles() = default;;
+	static SPuzzles* Puzzles_;
+	SPuzzles() = default;;
 public:
-	Puzzles(Puzzles& other) = delete;
-	void operator=(const Puzzles&) = delete;
+	SPuzzles(SPuzzles& other) = delete;
+	void operator=(const SPuzzles&) = delete;
 
-	static Puzzles* Get()
+	static SPuzzles* Get()
 	{
 		if (Puzzles_ == nullptr) {
-			Puzzles_ = new Puzzles;
+			Puzzles_ = new SPuzzles;
 		}
 		return Puzzles_;
 	}
 };
-class Timer
-{
-	using TP = std::chrono::steady_clock::time_point;
 
-private:
-	static Timer* Timer_;
-	Timer() : bIsActive(false), bIsPaused(true), PauseTime(0) {};
-	
-	uint bIsActive : 1;
-	uint bIsPaused : 1;
-
-	TP StartTimepoint;
-	TP PauseStartTimepoint;
-
-	long long PauseTime;
+class CPuzzleState;
+class CGridPrinter {
+	std::string grid = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #";
 public:
-	Timer(Timer& other) = delete;
-	void operator=(const Timer&) = delete;
+	void PrintCM(const CPuzzleState& PZI) const;
 
-	static Timer* Get()
-	{
-		if (Timer_ == nullptr) {
-			Timer_ = new Timer;
-		}
-		return Timer_;
-	}
+	void PrintTCM(const CPuzzleState& PZI) const;
 
-	TP GetBeginTimepoint()	{return StartTimepoint;};
-
-	void Begin()  { bIsActive = true; StartTimepoint = std::chrono::high_resolution_clock::now(); };
-	void Pause()  { if(bIsPaused)return; bIsPaused = true; PauseStartTimepoint = std::chrono::high_resolution_clock::now(); };
-	void Clear()  { delete Timer_; Timer_ = nullptr; }
-	void Resume()
-	{
-		if (!bIsPaused) return;
-		bIsPaused = false;
-		PauseTime += CalculatePauseTime();
-	};
-	long long CalculatePauseTime() 
-	{
-		if(!bIsPaused) return 0;
-		return (std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count() - std::chrono::time_point_cast<std::chrono::microseconds>(PauseStartTimepoint).time_since_epoch().count());
-	
-	}
-	//template <typename _To>
-	long long GetTimeElapsed()
-	{
-		long long start = 0;
-
-		if (bIsActive)
-		{
-			start = std::chrono::time_point_cast<std::chrono::microseconds>(StartTimepoint).time_since_epoch().count();
-			if (bIsPaused)
-			{
-				PauseTime += CalculatePauseTime();
-			}
-
-		return std::chrono::time_point_cast<std::chrono::microseconds>(std::chrono::steady_clock::now()).time_since_epoch().count() - start - PauseTime;
-		}
-		return 0;
-	};
-};
-class PuzzleState;
-class GridPrinter {
-	char grid[164] = "# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n# # # # # # # # #\n ";
-public:
-	void PrintCM(const PuzzleState& PZI) const;
-
-	void PrintTCM(const PuzzleState& PZI) const;
-
-	void PrintHeader(const PuzzleState& PZI) const;
+	void PrintHeader(const CPuzzleState& PZI) const;
 
 	void PrepareGridForPrinting(CCell* gv) {
-		uchar x = 0;
-		for (uchar i =0;i < 163; i++)
-		{
-			char& c = grid[i];
-			if (c != ' ' && c != '\n')
-			{
-				CCell& CurrCell = gv[x];
-				c = CurrCell.GetNum() + '0';
-				x++;
-			}
-		}
+		uint8_t i = 0;
+		for (auto& grid_val : grid)
+			if (grid_val != ' ' && grid_val != '\n')
+				grid_val = gv[i++].GetNum() + '0';
 	}
-	void Print() const{
-		for (uchar i=0; i < 162; i++)
-			std::cout << grid[i];
+	void Print() const {
+		std::cout << grid;
 	}
 
 private:
-	static GridPrinter* GridPrinter_;
-	GridPrinter() = default;;
+	static CGridPrinter* GridPrinter_;
+	CGridPrinter() = default;;
 public:
-	GridPrinter(GridPrinter& other) = delete;
-	void operator=(const GridPrinter&) = delete;
+	CGridPrinter(CGridPrinter& other) = delete;
+	void operator=(const CGridPrinter&) = delete;
 
-	static GridPrinter* Get()
+	static CGridPrinter* Get()
 	{
-		if (GridPrinter_ == nullptr) {
-			GridPrinter_ = new GridPrinter;
-		}
+		if (!GridPrinter_) GridPrinter_ = new CGridPrinter;
 		return GridPrinter_;
 	}
 };
 
-GridPrinter* GridPrinter::GridPrinter_ = nullptr;;
-Puzzles* Puzzles::Puzzles_ = nullptr;
-Timer* Timer::Timer_ = nullptr;
+CGridPrinter* CGridPrinter::GridPrinter_ = nullptr;;
+SPuzzles* SPuzzles::Puzzles_ = nullptr;
+CTimer* CTimer::Timer_ = nullptr;
 
 // row column block
 struct RCB {
@@ -272,21 +203,21 @@ struct Box : RCB
 	};
 };
 
-class PuzzleState {
+class CPuzzleState {
 public:
 	Row rows[9];
 	Col cols[9];
 	Box boxs[9];
 	CCell gridvals[81];
 
-	uint Pencil;
-	uint Pen;
+	uint8_t Pencil;
+	uint8_t Pen;
 
-	uint TotalChangesMade_Pencil;
-	uint TotalChangesMade_Pen;
+	uint8_t TotalChangesMade_Pencil;
+	uint8_t TotalChangesMade_Pen;
 
-	PuzzleState() : Pencil(0), Pen(0), TotalChangesMade_Pencil(0), TotalChangesMade_Pen(0){};
-	PuzzleState(const PuzzleState& PZI) {
+	CPuzzleState() : Pencil(0), Pen(0), TotalChangesMade_Pencil(0), TotalChangesMade_Pen(0){};
+	CPuzzleState(const CPuzzleState& PZI) {
 		Pencil = PZI.Pencil;
 		Pen = PZI.Pen;
 
@@ -328,14 +259,13 @@ public:
 				}
 			}
 			if (binvalid) { 
-				__debugbreak();
 				break;
 			}
 		}
 		return binvalid;
 	}
 	bool IsSolved() {
-		for (auto& gv: gridvals) {
+		for (auto& gv : gridvals) {
 			if (gv.GetNum()==0) {
 				return false;
 			}
@@ -359,13 +289,13 @@ public:
 		uchar z = 0;
 
 		for (uchar x = 0; x < 9; x++) {
-			rows[x].begin	= x * 9;		// 00|09|18|27...
-			rows[x].end		= (x * 9) + 8;// 08|17|26...
+			rows[x].begin = x * 9;		// 00|09|18|27...
+			rows[x].end	  = (x * 9) + 8;// 08|17|26...
 
-			cols[x].begin	= x;			// 00|01|02...
-			cols[x].end		= x + 72;		// 72|73|74...
+			cols[x].begin = x;			// 00|01|02...
+			cols[x].end	  = x + 72;		// 72|73|74...
 
-			boxs[x].begin	= x % 3 * 3 + 27 * z;   // 00|03|06|27|30|33|54
+			boxs[x].begin = x % 3 * 3 + 27 * z;   // 00|03|06|27|30|33|54
 
 			if (x % 3 == 2) {
 				z++;
@@ -380,7 +310,7 @@ uchar GetColNo(uchar CellNo) {
 	return (CellNo % 9) + 1;
 }
 
-void PuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
+void CPuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 	// for every row reduce possibilities
 	for (uchar x = 0; x < 9; x++)
 	{
@@ -406,37 +336,27 @@ void PuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 		}
 	}
 }
-void PuzzleState::Solve_clearPN_itrl() {
+void CPuzzleState::Solve_clearPN_itrl() {
 	Solve_clearPN_itrl(rows);
 	Solve_clearPN_itrl(cols);
 	Solve_clearPN_itrl(boxs);
 }
-void PuzzleState::Solve() {
+void CPuzzleState::Solve() {
 	Solve_clearPN_itrl();
 	// for every CCell make changes
 	for (CCell & CC : gridvals) {
 		if (CC.bSet) continue;
 
-		uchar NoOfPN = 0;
-		uchar LastPN = 0;
+		uint8_t LastPN;
 
-		for (uint8_t i = 0; i < 9; i++)
-		{
-			if (CC.Data & (0x01 << i))
-			{
-				NoOfPN++;
-				LastPN = i;
-			}
-		}
-
-		if (NoOfPN == 1) {
+		if (CC.GetPossibleNumCount(LastPN) == 1) {
 			CC.SetNum(LastPN + 1);
 			++Pen;
 		}
 	}
 }
 
-void PuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
+void CPuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 	Solve_clearPN_itrl();
 
 	// iteration through RCBs
@@ -445,7 +365,7 @@ void PuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 		RCB& rcb = _RCB[i];
 
 		// iteration through Cells in RCB
-		for (uint8_t ii = 0; i < 9; i++)
+		for (uint8_t ii = 0; ii < 9; i++)
 		{
 			CCell& cl = rcb.GetOffset(ii, gridvals);
 			if (cl.bSet) continue;
@@ -485,41 +405,38 @@ void PuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 		}
 	}
 }
-void PuzzleState::AdvancedSolve() {
+void CPuzzleState::AdvancedSolve() {
 
 	AdvancedSolve_itrl(rows);
 	AdvancedSolve_itrl(cols);
 	AdvancedSolve_itrl(boxs);
 }
 
-uint InceptionNo = 0;
+uint8_t InceptionNo = 0;
 
-bool BruteSolve(PuzzleState& PZI, bool bDebug)
+bool BruteSolve(CPuzzleState& PZI, bool bDebug)
 {
-	if (PZI.IsSolved())
-	{
-		return true; 
-	}
+	if (PZI.IsSolved())	return true; 
 	PZI.Solve_clearPN_itrl();
 
 	InceptionNo++;
 
-	uchar SelectedCellNo;
-	uchar MinPnNo = 10; // impossible
+	uint8_t SelectedCellNo;
+	uint8_t MinPnNo = 10; // impossible
 	CCell* SelectedCell = &PZI.gridvals[0];
 
 	// Find CCell with least possible values
-	for (uchar x = 0; x<81; x++)
+	for (uint8_t i = 0; i < 81; i++)
 	{
-		CCell* CC = &PZI.gridvals[x];
+		CCell* CC = &PZI.gridvals[i];
 
 		if(CC->bSet) continue;
 
-		uchar PnNo = 0;
+		uint8_t PnNo = 0;
 
-		for (uint8_t i = 0; i < 9; i++)
+		for (uint8_t ii = 0; ii < 9; ii++)
 		{
-			if (CC->Data & (0x01 << i))
+			if (CC->Data & (0x01 << ii))
 			{
 				PnNo++;
 			}
@@ -528,16 +445,16 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 		if(PnNo == 2)
 		{
 			MinPnNo = 2;
-			SelectedCellNo = x;
+			SelectedCellNo = i;
 			break;
 		}
 		if (PnNo < MinPnNo) {
 			MinPnNo = PnNo;
-			SelectedCellNo = x;
+			SelectedCellNo = i;
 		}
 	}
 	/*Copy Current State into PZI 2 for temp Modifications PZI2 being a temporary state*/
-	PuzzleState PZI2 = PuzzleState(PZI);
+	CPuzzleState PZI2 = CPuzzleState(PZI);
 
 	SelectedCell = &PZI2.gridvals[SelectedCellNo];
 
@@ -545,23 +462,23 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 	{
 		std::cout << "------------------------------------------------------------------\n";
 		std::cout << "InceptionNo: "<< InceptionNo << "\n"
-				  <<"Selected CCell: " <<SelectedCellNo	
-				  << "\n[" << MinPnNo << "]: ";
+				  << "Selected Cell: " << +SelectedCellNo	
+				  << "\n[" << +MinPnNo << "]: ";
 		SelectedCell->Print();
 		std::cout << "------------------------------------------------------------------\n";
 		std::cout << std::endl;
 
-		GridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
-		GridPrinter::Get()->Print();
+		CGridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
+		CGridPrinter::Get()->Print();
 
 		std::cout << std::endl;
 		std::cout << std::endl;
 	}
 
 	// For Every Possible No
-	for (uchar x = 0; x<MinPnNo; x++)
+	for (uchar x = 0; x < MinPnNo; x++)
 	{
-		PZI2 = PuzzleState(PZI);
+		PZI2 = CPuzzleState(PZI);
 		SelectedCell = &PZI2.gridvals[SelectedCellNo];
 
 		uchar it = x;
@@ -584,31 +501,31 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 		if (bDebug)
 		{
 			std::cout << std::endl;
-			GridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
-			GridPrinter::Get()->Print();
+			CGridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
+			CGridPrinter::Get()->Print();
 		}
 		while (true)
 		{
 			if (PZI2.IsSolved())
 			{
-				PZI = PuzzleState(PZI2);
+				PZI = CPuzzleState(PZI2);
 				return true;
 			}
 			if (PZI2.IsInvalid())
 			{
-				PZI2 = PuzzleState(PZI);
+				PZI2 = CPuzzleState(PZI);
 				SelectedCell = &PZI2.gridvals[SelectedCellNo];
 				if (bDebug)
 				{
-					GridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
-					GridPrinter::Get()->Print();
+					CGridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
+					CGridPrinter::Get()->Print();
 
 					std::cout << "INVALID: Reset" << std::endl;
 
 					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
 					std::cout << "InceptionNo: " << InceptionNo << "\n"
-						<< "Selected CCell: " << SelectedCellNo
-						<< "\n[" << MinPnNo << "]: ";
+						<< "Selected CCell: " << +SelectedCellNo
+						<< "\n[" << +MinPnNo << "]: ";
 					SelectedCell->Print();
 					std::cout << "------------------------------------------------------------------\n";
 					std::cout << std::endl;
@@ -627,24 +544,24 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 
 			if (PZI2.IsSolved())
 			{
-				PZI = PuzzleState(PZI2);
+				PZI = CPuzzleState(PZI2);
 				return true;
 			}
 			if (PZI2.IsInvalid())
 			{
-				PZI2 = PuzzleState(PZI);
+				PZI2 = CPuzzleState(PZI);
 				SelectedCell = &PZI2.gridvals[SelectedCellNo];
 				if (bDebug)
 				{
-					GridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
-					GridPrinter::Get()->Print();
+					CGridPrinter::Get()->PrepareGridForPrinting(PZI2.gridvals);
+					CGridPrinter::Get()->Print();
 
 					std::cout << "INVALID: Reset" << std::endl;
 
 					std::cout << "-------------------------xxxxxxxxxx------------------------------\n";
 					std::cout << "InceptionNo: " << InceptionNo << "\n"
-						<< "Selected CCell: " << SelectedCellNo
-						<< "\n[" << MinPnNo << "]: ";
+						<< "Selected CCell: " << +SelectedCellNo
+						<< "\n[" << +MinPnNo << "]: ";
 					SelectedCell->Print();
 					std::cout << "------------------------------------------------------------------\n";
 					std::cout << std::endl;
@@ -658,7 +575,7 @@ bool BruteSolve(PuzzleState& PZI, bool bDebug)
 			{
 				if((SelectedCell->bSet) && BruteSolve(PZI2, bDebug))
 				{
-					PZI = PuzzleState(PZI2);
+					PZI = CPuzzleState(PZI2);
 					return true;
 				}
 				else
@@ -688,12 +605,12 @@ void MakePuzzle()
 		std::cin >> in;
 		if (in == '#')
 		{
-			in = '#';
+			in = '0';
 		}
 		uchar Num = in-'0';
-		if (isdigit(in)&& Num >= 0 && Num<=9)
+		if (isdigit(in) && Num >= 0 && Num<=9)
 		{
-			Puzzles::Get()->custom[i] = in - '0';
+			SPuzzles::Get()->custom[i] = in - '0';
 			i++;
 		}
 		if(i==81)
@@ -716,7 +633,6 @@ void ChoosePuzzle(char& a, uchar*& pz) {
 		<< "Easy	: 2\n"
 		<< "Medium	: 3\n"
 		<< "Hard	: 4\n"
-		<< "Currently not solvable:\n"
 		<< "Very Hard	: 5\n"
 		<< "Very Hard	: 6\n"
 		<< std::endl << std::endl;
@@ -726,32 +642,32 @@ void ChoosePuzzle(char& a, uchar*& pz) {
 		{
 		case 'x':
 			std::cout << "Enter puzzle in text format" << std::endl;
-			pz = Puzzles::Get()->custom;
+			pz = SPuzzles::Get()->custom;
 			MakePuzzle();
 			bbreak = true;
 			break;
 		case '1':
-			pz = Puzzles::Get()->p1;
+			pz = SPuzzles::Get()->p1;
 			bbreak = true;
 			break;
 		case '2':
-			pz = Puzzles::Get()->p2;
+			pz = SPuzzles::Get()->p2;
 			bbreak = true;
 			break;
 		case '3':
-			pz = Puzzles::Get()->p3;
+			pz = SPuzzles::Get()->p3;
 			bbreak = true;
 			break;
 		case '4':
-			pz = Puzzles::Get()->p4;
+			pz = SPuzzles::Get()->p4;
 			bbreak = true;
 			break;
 		case '5':
-			pz = Puzzles::Get()->p5;
+			pz = SPuzzles::Get()->p5;
 			bbreak = true;
 			break;
 		case '6':
-			pz = Puzzles::Get()->p6;
+			pz = SPuzzles::Get()->p6;
 			bbreak = true;
 			break;
 		default:
@@ -765,8 +681,8 @@ void ChoosePuzzle(char& a, uchar*& pz) {
 int main()
 {
 	while (1) {
-		PuzzleState PZI;
-		uchar* pz = Puzzles::Get()->p1;
+		CPuzzleState PZI;
+		uchar* pz = SPuzzles::Get()->p1;
 
 		// input stuff
 		char a;
@@ -776,8 +692,8 @@ int main()
 		NewPage();
 		uint16_t iteration = 1;
 
-		GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
-		GridPrinter::Get()->Print();
+		CGridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
+		CGridPrinter::Get()->Print();
 		std::cout << std::endl;
 		std::cout << "Press #f + enter# to open hint sheet" << std::endl;
 		std::cout << "Press #a + enter# to solve in normal mode" << std::endl << std::endl;
@@ -828,36 +744,36 @@ int main()
 			NewPage();
 			continue;
 		}
-		Timer::Get()->Begin();
-		Timer::Get()->Pause();
+		CTimer::Get()->Begin();
+		CTimer::Get()->Pause();
 		while (1) {
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
 			bool bBruteSolve = false;
 
-			Timer::Get()->Resume();
+			CTimer::Get()->Resume();
 			PZI.Solve();
-			Timer::Get()->Pause();
+			CTimer::Get()->Pause();
 
 			if (PZI.Pen == 0 && PZI.Pencil == 0) {
 				if (PZI.IsSolved()) {
 					break;
 				}
 
-				Timer::Get()->Resume();
+				CTimer::Get()->Resume();
 				PZI.AdvancedSolve();
-				Timer::Get()->Pause();
+				CTimer::Get()->Pause();
 
 				bAdvanced = true;
-				if (PZI.Pen == 0 && PZI.Pencil == 0 && false) {
+				if (PZI.Pen == 0 && PZI.Pencil == 0) {
 					if (PZI.IsSolved()) {
 						break;
 					}
 					bBruteSolve = true;
-					Timer::Get()->Resume();
+					CTimer::Get()->Resume();
 					BruteSolve(PZI, DebugLevel > 0);
-					Timer::Get()->Pause();
+					CTimer::Get()->Pause();
 					break;
 				}
 			}
@@ -869,9 +785,9 @@ int main()
 				else
 					std::cout << "Iterations: " << iteration << " Type: BASIC" << std::endl;
 
-				GridPrinter::Get()->PrintHeader(PZI);
-				GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
-				GridPrinter::Get()->Print();
+				CGridPrinter::Get()->PrintHeader(PZI);
+				CGridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
+				CGridPrinter::Get()->Print();
 				std::cout << std::endl << std::endl;
 				iteration++;
 
@@ -883,8 +799,8 @@ int main()
 		}
 
 		std::cout << std::endl << std::endl << std::endl;
-		GridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
-		GridPrinter::Get()->Print();
+		CGridPrinter::Get()->PrepareGridForPrinting(PZI.gridvals);
+		CGridPrinter::Get()->Print();
 		std::cout << std::endl << std::endl << std::endl;
 
 		std::cout << "Press #m + enter# to return to menu" << std::endl;
@@ -896,14 +812,14 @@ int main()
 			switch (a)
 			{
 			case 'm': {
-				Timer::Get()->Clear();
+				CTimer::Get()->Clear();
 				NewPage();
 				bbreak = true;
 				break;
 			}
 			case 's': { 
-				GridPrinter::Get()->PrintCM(PZI);
-				long long ElapsedTime_microseconds = (long long)Timer::Get()->GetTimeElapsed();
+				CGridPrinter::Get()->PrintCM(PZI);
+				const auto ElapsedTime_microseconds = (long long)CTimer::Get()->GetTimeElapsed();
 				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds	<< " microseconds"	<< std::endl << std::endl;
 				std::cout << "TimeTaken (In Total): " << ElapsedTime_microseconds/1000000.f << " seconds" << std::endl << std::endl;
 				//std::cout << "TimeTaken (In Total): " << Timer::Get()->GetTimeElapsed<std::chrono::microseconds>() << " microseconds" << std::endl << std::endl;
@@ -922,17 +838,17 @@ int main()
 	}
 }
 
-void GridPrinter::PrintCM(const PuzzleState& PZI) const
+void CGridPrinter::PrintCM(const CPuzzleState& PZI) const
 {
 	std::cout << "Changes Made Pencil (Current Iteration): " << PZI.Pencil << std::endl;
 	std::cout << "Changes Made Pen (Current Iteration):    " << PZI.Pen << std::endl;
 }
-void GridPrinter::PrintTCM(const PuzzleState& PZI) const
+void CGridPrinter::PrintTCM(const CPuzzleState& PZI) const
 {
 	std::cout << "Changes Made Pencil (In Total): " << PZI.TotalChangesMade_Pencil << std::endl;
 	std::cout << "Changes Made Pen (In Total):    " << PZI.TotalChangesMade_Pen << std::endl << std::endl;
 }
-void GridPrinter::PrintHeader(const PuzzleState& PZI) const
+void CGridPrinter::PrintHeader(const CPuzzleState& PZI) const
 {
 	PrintCM(PZI);
 	PrintTCM(PZI);

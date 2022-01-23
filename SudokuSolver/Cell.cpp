@@ -8,7 +8,6 @@ CCell::CCell() :
 	bClearedBox(0)
 {
 	Data ^= ~Data;
-	Print();
 }
 
 CCell::CCell(const CCell& C) :
@@ -18,7 +17,6 @@ CCell::CCell(const CCell& C) :
 	bClearedBox(C.bClearedBox),
 	Data(C.Data)
 {
-	Print();
 }
 
 void CCell::Print() const
@@ -26,7 +24,7 @@ void CCell::Print() const
 	if (bSet) std::cout << +Data << ": ";
 
 	for (uint8_t i = 0; i < 9; i++)
-		std::cout << (bool(Data & (0x01 << i)) ? i+1 : 0 ) << "|";
+		std::cout << (bool(Data & (0x01 << i)) ? +(i+1) : 0 ) << "|";
 	std::cout << "\n";
 }
 
@@ -36,6 +34,32 @@ void CCell::SetNum(uint8_t _Num)
 	if(_Num == 0) return;
 	bSet = 1;
 	Data = _Num;
+}
+
+const uint8_t CCell::GetPossibleNumCount(uint8_t& _LastPN) const
+{
+	uint8_t NoOfPN = 0;
+	for (uint8_t i = 0; i < 9; i++)
+	{
+		if (Data & (0x01 << i))
+		{
+			NoOfPN++;
+			_LastPN = i;
+		}
+	}
+	return NoOfPN;
+}
+const uint8_t CCell::GetPossibleNumCount() const
+{
+	uint8_t NoOfPN = 0;
+	for (uint8_t i = 0; i < 9; i++)
+	{
+		if (Data & (0x01 << i))
+		{
+			NoOfPN++;
+		}
+	}
+	return NoOfPN;
 }
 
 uint8_t CCell::GetNum()

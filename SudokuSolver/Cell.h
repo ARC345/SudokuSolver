@@ -9,6 +9,9 @@ class CCell
 		CCell(const CCell& C);
 		void Print() const;
 		void SetNum(uint8_t _Num);
+
+		const uint8_t GetPossibleNumCount(uint8_t& _LastPN) const;
+		const uint8_t GetPossibleNumCount() const;
 		uint8_t GetNum();
 	protected:
 	private:

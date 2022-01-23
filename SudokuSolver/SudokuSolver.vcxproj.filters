@@ -26,5 +26,8 @@
     <ClInclude Include="Cell.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\timer\Timer.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
