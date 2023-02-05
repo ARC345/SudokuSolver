@@ -11,7 +11,7 @@
 
 using uchar = unsigned char;
 
-enum EPuzzleDifficulty : uint8_t
+enum class EPuzzleDifficulty : uint8_t
 {
 	VeryEasy,
 	Easy,
@@ -19,7 +19,7 @@ enum EPuzzleDifficulty : uint8_t
 	Hard,
 	VeryHard
 };
-enum EDebugLevel : uint8_t
+enum class EDebugLevel : uint8_t
 {
 	None=0,
 	Basic=1,
@@ -423,7 +423,7 @@ bool BruteSolve(CPuzzleState& PZI, bool bDebug)
 
 	uint8_t SelectedCellNo;
 	uint8_t MinPnNo = 10; // impossible
-	CCell* SelectedCell = &PZI.gridvals[0];
+
 
 	// Find CCell with least possible values
 	for (uint8_t i = 0; i < 81; i++)
@@ -772,12 +772,12 @@ int main()
 					}
 					bBruteSolve = true;
 					CTimer::Get()->Resume();
-					BruteSolve(PZI, DebugLevel > 0);
+					BruteSolve(PZI, (int)DebugLevel > 0);
 					CTimer::Get()->Pause();
 					break;
 				}
 			}
-			if (DebugLevel > 0) {
+			if ((int)DebugLevel > 0) {
 				if (bBruteSolve)
 					std::cout << "Iterations: " << iteration << " Type: BRUTE" << std::endl;
 				else if (bAdvanced)
