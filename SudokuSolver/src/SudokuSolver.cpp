@@ -126,7 +126,8 @@ public:
 			if (grid_val != ' ' && grid_val != '\n')
 				grid_val = gv[i++].GetNum() + '0';
 	}
-	void Print() const {
+
+  void Print() const {
 		std::cout << grid;
 	}
 
@@ -736,9 +737,11 @@ int main()
 			NewPage();
 			continue;
 		}
-		CTimer::Get()->Begin();
+		
+    CTimer::Get()->Begin();
 		CTimer::Get()->Pause();
-		while (1) {
+
+    while (1) {
 			PZI.Pencil = 0;
 			PZI.Pen = 0;
 			bool bAdvanced = false;
@@ -763,6 +766,7 @@ int main()
 						break;
 					}
 					bBruteSolve = true;
+
 					CTimer::Get()->Resume();
 					BruteSolve(PZI, (int)DebugLevel > 0);
 					CTimer::Get()->Pause();

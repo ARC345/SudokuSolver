@@ -1,4 +1,3 @@
 # SudokuSolver
 
-A sudoku solver using the command prompt static arrays
-(no std::strings or std::vectors used)  
+Fast Sudoku solver whcih can solve any solvable problem out there quickly
