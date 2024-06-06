@@ -1,3 +1,3 @@
 # SudokuSolver
 
-Fast Sudoku solver with multiple algorithms used 
+Fast Sudoku solver whcih can solve any solvable problem out there quickly
