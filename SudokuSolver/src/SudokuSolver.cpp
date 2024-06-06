@@ -3,7 +3,7 @@
 #include <cctype>
 #include <ratio>
 #include <xtr1common>
-#include "../Cell.h"
+#include "Cell.h"
 #include "timer/Timer.h"
 #include <string>
 
@@ -325,9 +325,7 @@ void CPuzzleState::Solve_clearPN_itrl(RCB* _RCB) {
 					CCell& CurrCellR = CR.GetOffset(z, gridvals);	// Current CCell R is the first CCell row + iteration to get the offset or column
 					if (!CurrCellR.bSet)
 					{
-						uchar PV = CC.GetNum();
-
-						CurrCellR.Data &= ~(1u << PV - 1);
+						CurrCellR.Data &= ~(1u << CC.GetNum() - 1);
 						Pencil++;
 					}
 				}
@@ -365,7 +363,7 @@ void CPuzzleState::AdvancedSolve_itrl(RCB* _RCB) {
 		RCB& rcb = _RCB[i];
 
 		// iteration through Cells in RCB
-		for (uint8_t ii = 0; ii < 9; i++)
+		for (uint8_t ii = 0; ii < 9; ii++)
 		{
 			CCell& cl = rcb.GetOffset(ii, gridvals);
 			if (cl.bSet) continue;
@@ -424,19 +422,17 @@ bool BruteSolve(CPuzzleState& PZI, bool bDebug)
 	uint8_t SelectedCellNo;
 	uint8_t MinPnNo = 10; // impossible
 
-
 	// Find CCell with least possible values
 	for (uint8_t i = 0; i < 81; i++)
 	{
-		CCell* CC = &PZI.gridvals[i];
-
-		if(CC->bSet) continue;
+		CCell& CC = PZI.gridvals[i];
+		if(CC.bSet) continue;
 
 		uint8_t PnNo = 0;
 
 		for (uint8_t ii = 0; ii < 9; ii++)
 		{
-			if (CC->Data & (0x01 << ii))
+			if (CC.Data & (0x01 << ii))
 			{
 				PnNo++;
 			}
@@ -455,8 +451,7 @@ bool BruteSolve(CPuzzleState& PZI, bool bDebug)
 	}
 	/*Copy Current State into PZI 2 for temp Modifications PZI2 being a temporary state*/
 	CPuzzleState PZI2 = CPuzzleState(PZI);
-
-	SelectedCell = &PZI2.gridvals[SelectedCellNo];
+	CCell* SelectedCell = &PZI2.gridvals[SelectedCellNo];
 
 	if(bDebug)
 	{
@@ -586,10 +581,7 @@ bool BruteSolve(CPuzzleState& PZI, bool bDebug)
 		}
 	}
 
-	if (PZI.IsSolved())
-	{
-		return true;
-	}
+	if (PZI.IsSolved()) return true;
 
 	--InceptionNo;
 	return false;
